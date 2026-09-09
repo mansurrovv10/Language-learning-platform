@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 import uvicorn
+from backend.api.chats import router as chats_router
 
 duolingo = FastAPI(title="Mini Duolingo")
+duolingo.include_router(chats_router)
 
 
 
