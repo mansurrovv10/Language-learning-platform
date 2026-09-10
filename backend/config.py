@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -12,3 +16,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+ALGORITHM="HS256"
+ACCESS_TOKEN_LIFETIME=30
+REFRESH_TOKEN_LIFETIME=7

@@ -1,0 +1,42 @@
+import uuid
+from fastapi import APIRouter,Depends,HTTPException
+from sqlalchemy.orm import Session
+from backend.database.db import SessionLocal
+from backend.models.user import UserProfile
+from backend.schemas.auth_schema import UserResponseSchema
+from backend.schemas.user_schema import UserUpdateSchema
+from backend.api.auth import get_current_user,require_admin
+from backend.services.user_ser import UserService
+
+user_router=APIRouter(prefix="/users",tags=["Users"])
+
+async def get_db():
+    db=SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@user_router.get("/me",response_model=UserResponseSchema)
+async def user_me(current_user:UserProfile=Depends(get_current_user)):
+    return current_user
+
+@user_router.get("/",response_model=list[UserResponseSchema])
+async def user_list(db:Session=Depends(get_db),current_user:UserProfile=Depends(require_admin)):
+    return UserService(db).get_users()
+
+@user_router.get("/{user_id}",response_model=UserResponseSchema)
+async def user_detail(user_id:uuid.UUID,db:Session=Depends(get_db)):
+    user=UserService(db).get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404,detail="User not found")
+    return user
+
+@user_router.put("/me",response_model=UserResponseSchema)
+async def update_profile(data:UserUpdateSchema,current_user:UserProfile=Depends(get_current_user),db:Session=Depends(get_db)):
+    return UserService(db).update_user(current_user,data)
+
+@user_router.delete("/me")
+async def delete_profile(current_user:UserProfile=Depends(get_current_user),db:Session=Depends(get_db)):
+    UserService(db).delete_user(current_user)
+    return {"message":"User deleted successfully"}
