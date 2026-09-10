@@ -1,31 +1,35 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import UserProfile,RefreshToken
 
 class AuthRepository:
-    def __init__(self,db:Session):
+    def __init__(self,db:AsyncSession):
         self.db=db
 
-    def get_user_by_email(self,email):
-        return self.db.query(UserProfile).filter(UserProfile.email==email).first()
+    async def get_user_by_email(self,email):
+        result=await self.db.execute(select(UserProfile).where(UserProfile.email==email))
+        return result.scalar_one_or_none()
 
-    def get_user_by_username(self,username):
-        return self.db.query(UserProfile).filter(UserProfile.username==username).first()
+    async def get_user_by_username(self,username):
+        result=await self.db.execute(select(UserProfile).where(UserProfile.username==username))
+        return result.scalar_one_or_none()
 
-    def get_refresh_token(self,token):
-        return self.db.query(RefreshToken).filter(RefreshToken.token==token).first()
+    async def get_refresh_token(self,token):
+        result=await self.db.execute(select(RefreshToken).where(RefreshToken.token==token))
+        return result.scalar_one_or_none()
 
-    def create_user(self,user):
+    async def create_user(self,user):
         self.db.add(user)
-        self.db.commit()
-        self.db.refresh(user)
+        await self.db.commit()
+        await self.db.refresh(user)
         return user
 
-    def create_refresh_token(self,refresh_token):
+    async def create_refresh_token(self,refresh_token):
         self.db.add(refresh_token)
-        self.db.commit()
-        self.db.refresh(refresh_token)
+        await self.db.commit()
+        await self.db.refresh(refresh_token)
         return refresh_token
 
-    def delete_refresh_token(self,refresh_token):
-        self.db.delete(refresh_token)
-        self.db.commit()
+    async def delete_refresh_token(self,refresh_token):
+        await self.db.delete(refresh_token)
+        await self.db.commit()

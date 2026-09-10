@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database.db import SessionLocal
+from backend.api.auth import get_current_user
+from backend.models.user import UserProfile
 from backend.repositories.chat_repo import ChatRepository
 from backend.schemas.chat_schema import (
     ChatCreate,
@@ -42,13 +44,22 @@ def get_chat_service(
 @router.post("/", response_model=ChatResponse)
 async def create_chat(
     data: ChatCreate,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
-    return await service.create_chat(data)
+    chat = await service.create_chat(data)
+
+    await service.add_member(
+        chat_id=chat.id,
+        user_id=current_user.id
+    )
+
+    return chat
 
 
 @router.get("/", response_model=list[ChatResponse])
 async def get_chats(
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     return await service.get_all_chats()
@@ -57,6 +68,7 @@ async def get_chats(
 @router.get("/{chat_id}", response_model=ChatResponse)
 async def get_chat(
     chat_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     chat = await service.get_chat(chat_id)
@@ -78,6 +90,7 @@ async def get_chat(
 async def add_member(
     chat_id: UUID,
     data: ChatMemberCreate,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     chat = await service.get_chat(chat_id)
@@ -100,6 +113,7 @@ async def add_member(
 )
 async def get_members(
     chat_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     chat = await service.get_chat(chat_id)
@@ -119,6 +133,7 @@ async def get_members(
 async def remove_member(
     chat_id: UUID,
     user_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     chat = await service.get_chat(chat_id)
@@ -158,8 +173,8 @@ async def remove_member(
 )
 async def create_message(
     chat_id: UUID,
-    sender_id: UUID,
     data: MessageCreate,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     chat = await service.get_chat(chat_id)
@@ -172,7 +187,7 @@ async def create_message(
 
     member = await service.get_member(
         chat_id,
-        sender_id
+        current_user.id
     )
 
     if member is None:
@@ -183,7 +198,7 @@ async def create_message(
 
     return await service.create_message(
         chat_id,
-        sender_id,
+        current_user.id,
         data
     )
 
@@ -194,6 +209,7 @@ async def create_message(
 )
 async def get_messages(
     chat_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     chat = await service.get_chat(chat_id)
@@ -214,6 +230,7 @@ async def get_messages(
 async def get_message(
     chat_id: UUID,
     message_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -235,6 +252,7 @@ async def update_message(
     chat_id: UUID,
     message_id: UUID,
     data: MessageUpdate,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -243,6 +261,12 @@ async def update_message(
         raise HTTPException(
             status_code=404,
             detail="Message not found"
+        )
+
+    if message.sender_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only update your own messages"
         )
 
     return await service.update_message(
@@ -258,6 +282,7 @@ async def update_message(
 async def mark_message_as_read(
     chat_id: UUID,
     message_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -279,6 +304,7 @@ async def mark_message_as_read(
 async def delete_message(
     chat_id: UUID,
     message_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -287,6 +313,12 @@ async def delete_message(
         raise HTTPException(
             status_code=404,
             detail="Message not found"
+        )
+
+    if message.sender_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own messages"
         )
 
     await service.delete_message(message_id)
@@ -305,8 +337,8 @@ async def delete_message(
 async def create_reaction(
     chat_id: UUID,
     message_id: UUID,
-    user_id: UUID,
     data: ReactionCreate,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -319,7 +351,7 @@ async def create_reaction(
 
     member = await service.get_member(
         chat_id,
-        user_id
+        current_user.id
     )
 
     if member is None:
@@ -330,7 +362,7 @@ async def create_reaction(
 
     existing_reaction = await service.get_reaction(
         message_id,
-        user_id
+        current_user.id
     )
 
     if existing_reaction is not None:
@@ -341,7 +373,7 @@ async def create_reaction(
 
     return await service.create_reaction(
         message_id,
-        user_id,
+        current_user.id,
         data
     )
 
@@ -353,6 +385,7 @@ async def create_reaction(
 async def get_reactions(
     chat_id: UUID,
     message_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -367,13 +400,13 @@ async def get_reactions(
 
 
 @router.get(
-    "/{chat_id}/messages/{message_id}/reactions/{user_id}",
+    "/{chat_id}/messages/{message_id}/reactions/me",
     response_model=ReactionResponse
 )
-async def get_reaction(
+async def get_my_reaction(
     chat_id: UUID,
     message_id: UUID,
-    user_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -386,7 +419,7 @@ async def get_reaction(
 
     reaction = await service.get_reaction(
         message_id,
-        user_id
+        current_user.id
     )
 
     if reaction is None:
@@ -399,12 +432,12 @@ async def get_reaction(
 
 
 @router.delete(
-    "/{chat_id}/messages/{message_id}/reactions/{user_id}"
+    "/{chat_id}/messages/{message_id}/reactions"
 )
 async def delete_reaction(
     chat_id: UUID,
     message_id: UUID,
-    user_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
     message = await service.get_message(message_id)
@@ -417,7 +450,7 @@ async def delete_reaction(
 
     reaction = await service.get_reaction(
         message_id,
-        user_id
+        current_user.id
     )
 
     if reaction is None:
@@ -428,7 +461,7 @@ async def delete_reaction(
 
     await service.delete_reaction(
         message_id,
-        user_id
+        current_user.id
     )
 
     return {

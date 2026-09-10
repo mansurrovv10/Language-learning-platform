@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.exercise import ExerciseRepository
-from backend.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseResponse, ExerciseSubmit, ExerciseResult
-from backend.services.exercise import ExerciseService
+from backend.database.db import get_session
+from backend.repositories.exercise_repo import ExerciseRepository
+from backend.schemas.exercise_schema import ExerciseCreate, ExerciseUpdate, ExerciseResponse, ExerciseSubmit, ExerciseResult
+from backend.services.exercise_service import ExerciseService
 
 
 router = APIRouter(prefix="/exercises", tags=["Exercises"])
@@ -84,7 +84,7 @@ async def submit_exercise(
 ):
     result = await service.submit_exercise(exercise_id, data)
 
-    if not result:
+    if result is None:
         raise HTTPException(status_code=404, detail="Exercise not found")
 
     return result

@@ -20,9 +20,9 @@ class UserProfile(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String, unique=True)
     username: Mapped[str] = mapped_column(String, unique=True)
-    password: Mapped[str] = mapped_column(String)
+    password_hash: Mapped[str] = mapped_column(String)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole),default=UserRole.USER)
-    is_active: Mapped[bool] = mapped_column(Boolean,default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean,default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     refresh_user: Mapped[List['RefreshToken']] = relationship(back_populates='users',

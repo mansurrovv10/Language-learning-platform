@@ -1,6 +1,6 @@
 import uuid
 
-from backend.repositories.progress import ProgressRepository
+from backend.repositories.progress_repo import ProgressRepository
 
 
 class ProgressService:

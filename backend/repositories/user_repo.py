@@ -1,28 +1,33 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import UserProfile
 
 class UserRepository:
-    def __init__(self,db:Session):
+    def __init__(self,db:AsyncSession):
         self.db=db
 
-    def get_by_id(self,user_id):
-        return self.db.query(UserProfile).filter(UserProfile.id==user_id).first()
+    async def get_by_id(self,user_id):
+        result=await self.db.execute(select(UserProfile).where(UserProfile.id==user_id))
+        return result.scalar_one_or_none()
 
-    def get_by_email(self,email):
-        return self.db.query(UserProfile).filter(UserProfile.email==email).first()
+    async def get_by_email(self,email):
+        result=await self.db.execute(select(UserProfile).where(UserProfile.email==email))
+        return result.scalar_one_or_none()
 
-    def get_by_username(self,username):
-        return self.db.query(UserProfile).filter(UserProfile.username==username).first()
+    async def get_by_username(self,username):
+        result=await self.db.execute(select(UserProfile).where(UserProfile.username==username))
+        return result.scalar_one_or_none()
 
-    def get_all(self):
-        return self.db.query(UserProfile).all()
+    async def get_all(self):
+        result=await self.db.execute(select(UserProfile))
+        return result.scalars().all()
 
-    def create(self,user):
+    async def create(self,user):
         self.db.add(user)
-        self.db.commit()
-        self.db.refresh(user)
+        await self.db.commit()
+        await self.db.refresh(user)
         return user
 
-    def delete(self,user):
-        self.db.delete(user)
-        self.db.commit()
+    async def delete(self,user):
+        await self.db.delete(user)
+        await self.db.commit()

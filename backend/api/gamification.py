@@ -1,10 +1,12 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.gamification import GamificationRepository
-from backend.schemas.gamification import XPCreate, XPResponse, StreakResponse
-from backend.services.gamification import GamificationService
+from backend.database.db import get_session
+from backend.repositories.gamification_repo import GamificationRepository
+from backend.schemas.gamification_schema import XPCreate, XPResponse, StreakResponse
+from backend.services.gamification_service import GamificationService
 
 
 router = APIRouter(prefix="/gamification", tags=["Gamification"])
@@ -17,7 +19,7 @@ def get_gamification_service(session: AsyncSession = Depends(get_session)):
 
 @router.get("/xp/{user_id}", response_model=list[XPResponse])
 async def get_xp_history(
-    user_id: int,
+    user_id: uuid.UUID,
     service: GamificationService = Depends(get_gamification_service)
 ):
     return await service.get_xp_history(user_id)
@@ -33,7 +35,7 @@ async def add_xp(
 
 @router.get("/streak/{user_id}", response_model=StreakResponse)
 async def get_streak(
-    user_id: int,
+    user_id: uuid.UUID,
     service: GamificationService = Depends(get_gamification_service)
 ):
     streak = await service.get_streak(user_id)
@@ -46,7 +48,7 @@ async def get_streak(
 
 @router.post("/streak/{user_id}", response_model=StreakResponse)
 async def update_streak(
-    user_id: int,
+    user_id: uuid.UUID,
     service: GamificationService = Depends(get_gamification_service)
 ):
     return await service.update_streak(user_id)

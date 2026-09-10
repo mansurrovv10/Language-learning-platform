@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.course import CourseRepository
-from backend.schemas.course import CourseCreate, CourseUpdate, CourseResponse
-from backend.services.course import CourseService
+from backend.database.db import get_session
+from backend.repositories.course_repo import CourseRepository
+from backend.schemas.course_schema import CourseCreate, CourseUpdate, CourseResponse
+from backend.services.course_service import CourseService
 
 
 router = APIRouter(prefix="/courses", tags=["Courses"])

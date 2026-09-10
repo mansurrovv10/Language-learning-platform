@@ -3,10 +3,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.progress import ProgressRepository
-from backend.schemas.progress import ProgressCreate, ProgressUpdate, ProgressResponse
-from backend.services.progress import ProgressService
+from backend.database.db import get_session
+from backend.repositories.progress_repo import ProgressRepository
+from backend.schemas.progress_schema import ProgressCreate, ProgressUpdate, ProgressResponse
+from backend.services.progress_service import ProgressService
 
 
 router = APIRouter(prefix="/progress", tags=["Progress"])

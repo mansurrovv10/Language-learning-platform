@@ -1,4 +1,4 @@
-from backend.repositories.lesson import LessonRepository
+from backend.repositories.lessons_repo import LessonRepository
 
 
 class LessonService:

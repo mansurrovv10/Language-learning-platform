@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, timedelta
 
-from backend.repositories.gamification import GamificationRepository
+from backend.repositories.gamification_repo import GamificationRepository
 
 
 class GamificationService:

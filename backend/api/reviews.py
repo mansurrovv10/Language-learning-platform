@@ -1,10 +1,12 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.review import ReviewRepository
-from backend.schemas.review import ReviewCreate, ReviewUpdate, ReviewResponse
-from backend.services.review import ReviewService
+from backend.database.db import get_session
+from backend.repositories.review_repo import ReviewRepository
+from backend.schemas.review_schema import ReviewCreate, ReviewUpdate, ReviewResponse
+from backend.services.review_service import ReviewService
 
 
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
@@ -37,7 +39,7 @@ async def get_review(
 
 @router.get("/user/{user_id}", response_model=list[ReviewResponse])
 async def get_user_reviews(
-    user_id: int,
+    user_id: uuid.UUID,
     service: ReviewService = Depends(get_review_service)
 ):
     return await service.get_by_user(user_id)

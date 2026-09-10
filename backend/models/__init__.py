@@ -9,7 +9,7 @@ from backend.models.chat import Chat, ChatMember
 from backend.models.message import Message
 from backend.models.social import FriendRequest, Friendship
 from backend.models.achievement import Achievement, UserAchievement
-from backend.models.challange import DailyChallenge
+from backend.models.challenge import DailyChallenge
 from backend.models.leaderboard import Leaderboard
 from backend.models.notification import Notification
 from backend.models.review import CourseReview

@@ -5,6 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from backend.database.db import SessionLocal
 from backend.repositories.chat_repo import ChatRepository
 from backend.schemas.chat_schema import MessageCreate
+from backend.services.auth_ser import AuthService
 from backend.services.chat_service import ChatService
 
 
@@ -95,9 +96,42 @@ manager = ConnectionManager()
 async def chat_websocket(
     websocket: WebSocket,
     chat_id: UUID,
-    user_id: UUID
+    token: str = ""
 ):
+    await websocket.accept()
+
+    auth_header = websocket.headers.get("authorization", "")
+
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+
+    if not token:
+        await websocket.close(
+            code=1008,
+            reason="Authentication required"
+        )
+        return
+
     async with SessionLocal() as session:
+
+        auth_service = AuthService(session)
+        payload = auth_service.decode_token(token)
+
+        if not payload or payload.get("type") != "access":
+            await websocket.close(
+                code=1008,
+                reason="Invalid token"
+            )
+            return
+
+        try:
+            user_id = UUID(str(payload.get("sub")))
+        except (ValueError, TypeError):
+            await websocket.close(
+                code=1008,
+                reason="Invalid token payload"
+            )
+            return
 
         repository = ChatRepository(session)
         service = ChatService(repository)

@@ -1,4 +1,4 @@
-from backend.repositories.language import LanguageRepository
+from backend.repositories.language_repo import LanguageRepository
 
 
 class LanguageService:

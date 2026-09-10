@@ -1,42 +1,48 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.social import FriendRequest,Friendship,FriendRequestStatus
 
 class FriendRepository:
-    def __init__(self,db:Session):
+    def __init__(self,db:AsyncSession):
         self.db=db
 
-    def get_request(self,sender_id,receiver_id):
-        return self.db.query(FriendRequest).filter(FriendRequest.sender_id==sender_id,FriendRequest.receiver_id==receiver_id).first()
+    async def get_request(self,sender_id,receiver_id):
+        result=await self.db.execute(select(FriendRequest).where(FriendRequest.sender_id==sender_id,FriendRequest.receiver_id==receiver_id))
+        return result.scalar_one_or_none()
 
-    def get_request_by_id(self,request_id):
-        return self.db.query(FriendRequest).filter(FriendRequest.id==request_id).first()
+    async def get_request_by_id(self,request_id):
+        result=await self.db.execute(select(FriendRequest).where(FriendRequest.id==request_id))
+        return result.scalar_one_or_none()
 
-    def create_request(self,request):
+    async def create_request(self,request):
         self.db.add(request)
-        self.db.commit()
-        self.db.refresh(request)
+        await self.db.commit()
+        await self.db.refresh(request)
         return request
 
-    def get_received_requests(self,user_id):
-        return self.db.query(FriendRequest).filter(FriendRequest.receiver_id==user_id,FriendRequest.status==FriendRequestStatus.PENDING).all()
+    async def get_received_requests(self,user_id):
+        result=await self.db.execute(select(FriendRequest).where(FriendRequest.receiver_id==user_id,FriendRequest.status==FriendRequestStatus.PENDING))
+        return result.scalars().all()
 
-    def get_friendship(self,user_id,friend_id):
-        return self.db.query(Friendship).filter(Friendship.user_id==user_id,Friendship.friend_id==friend_id).first()
+    async def get_friendship(self,user_id,friend_id):
+        result=await self.db.execute(select(Friendship).where(Friendship.user_id==user_id,Friendship.friend_id==friend_id))
+        return result.scalar_one_or_none()
 
-    def get_friends(self,user_id):
-        return self.db.query(Friendship).filter(Friendship.user_id==user_id).all()
+    async def get_friends(self,user_id):
+        result=await self.db.execute(select(Friendship).where(Friendship.user_id==user_id))
+        return result.scalars().all()
 
-    def create_friendship(self,friendship):
+    async def create_friendship(self,friendship):
         self.db.add(friendship)
-        self.db.commit()
-        self.db.refresh(friendship)
+        await self.db.commit()
+        await self.db.refresh(friendship)
         return friendship
 
-    def delete_friendship(self,friendship):
-        self.db.delete(friendship)
-        self.db.commit()
+    async def delete_friendship(self,friendship):
+        await self.db.delete(friendship)
+        await self.db.commit()
 
-    def save_request(self,request):
-        self.db.commit()
-        self.db.refresh(request)
+    async def save_request(self,request):
+        await self.db.commit()
+        await self.db.refresh(request)
         return request

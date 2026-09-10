@@ -1,6 +1,6 @@
 from backend.models.course import Course
-from backend.repositories.course import CourseRepository
-from backend.schemas.course import CourseCreate, CourseUpdate
+from backend.repositories.course_repo import CourseRepository
+from backend.schemas.course_schema import CourseCreate, CourseUpdate
 
 
 class CourseService:

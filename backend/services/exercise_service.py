@@ -1,6 +1,6 @@
 from backend.models.exercise import Exercise
-from backend.repositories.exercise import ExerciseRepository
-from backend.schemas.exercise import ExerciseCreate, ExerciseUpdate
+from backend.repositories.exercise_repo import ExerciseRepository
+from backend.schemas.exercise_schema import ExerciseCreate, ExerciseUpdate, ExerciseResult, ExerciseSubmit
 
 
 class ExerciseService:
@@ -39,3 +39,26 @@ class ExerciseService:
 
         await self.repository.delete(exercise)
         return True
+
+    async def submit_exercise(self, exercise_id: int, data: ExerciseSubmit):
+        exercise = await self.repository.get_by_id(exercise_id)
+
+        if not exercise:
+            return None
+
+        correct = self._check_answer(exercise, data.answer)
+        return ExerciseResult(correct=correct, score=10 if correct else 0)
+
+    def _normalize(self, value):
+        if isinstance(value, str):
+            return value.strip().lower()
+        if isinstance(value, dict):
+            return {self._normalize(k): self._normalize(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._normalize(item) for item in value]
+        return value
+
+    def _check_answer(self, exercise: Exercise, answer):
+        expected = self._normalize(exercise.correct_answer)
+        actual = self._normalize(answer)
+        return actual == expected

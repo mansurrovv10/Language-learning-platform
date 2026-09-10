@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.lesson import LessonRepository
-from backend.schemas.lesson import LessonCreate, LessonUpdate, LessonResponse
-from backend.services.lesson import LessonService
+from backend.database.db import get_session
+from backend.repositories.lessons_repo import LessonRepository
+from backend.schemas.lessons_schema import LessonCreate, LessonUpdate, LessonResponse
+from backend.services.lessons_service import LessonService
 
 
 router = APIRouter(prefix="/lessons", tags=["Lessons"])

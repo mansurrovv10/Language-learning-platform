@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -12,8 +13,8 @@ class ProgressCreate(BaseModel):
 
 
 class ProgressUpdate(BaseModel):
-    completed: bool
-    score: int
+    completed: Optional[bool] = None
+    score: Optional[int] = None
 
 
 class ProgressResponse(BaseModel):

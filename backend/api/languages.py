@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.database import get_session
-from backend.repositories.language import LanguageRepository
-from backend.schemas.language import LanguageCreate, LanguageUpdate, LanguageResponse
-from backend.services.language import LanguageService
+from backend.database.db import get_session
+from backend.repositories.language_repo import LanguageRepository
+from backend.schemas.language_schema import LanguageCreate, LanguageUpdate, LanguageResponse
+from backend.services.language_service import LanguageService
 
 
 router = APIRouter(prefix="/languages", tags=["Languages"])
