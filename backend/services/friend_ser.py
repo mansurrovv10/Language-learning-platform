@@ -1,12 +1,15 @@
 from sqlalchemy import select
 from fastapi import HTTPException
 from backend.models.social import FriendRequest,Friendship,FriendRequestStatus
+from backend.models.notification import NotificationType
 from backend.models.user import UserProfile
 from backend.repositories.friend_repo import FriendRepository
+from backend.repositories.notification_repo import NotificationRepository
 
 class FriendService:
     def __init__(self,db):
         self.repository=FriendRepository(db)
+        self.notification_repository=NotificationRepository(db)
 
     async def send_request(self,sender_id,receiver_id):
         if sender_id==receiver_id:
@@ -20,6 +23,18 @@ class FriendService:
         if await self.repository.get_request(sender_id,receiver_id):
             raise HTTPException(status_code=400,detail="Request already exists")
         request=FriendRequest(sender_id=sender_id,receiver_id=receiver_id)
+
+        sender_result=await self.repository.db.execute(select(UserProfile).where(UserProfile.id==sender_id))
+        sender=sender_result.scalar_one_or_none()
+        sender_name=sender.username if sender else str(sender_id)
+
+        await self.notification_repository.create(
+            user_id=receiver_id,
+            type=NotificationType.FRIEND_REQUEST,
+            title="New friend request",
+            message=f"{sender_name} sent you a friend request"
+        )
+
         return await self.repository.create_request(request)
 
     async def accept_request(self,request_id,user_id):

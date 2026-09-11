@@ -6,28 +6,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from backend.config import settings
 from backend.database.base import Base
-from backend.models import (
-    UserProfile,
-    Language,
-    Course,
-    Lesson,
-    Exercise,
-    UserProgress,
-    XPHistory,
-    Streak,
-    Chat,
-    ChatMember,
-    Message,
-    FriendRequest,
-    Friendship,
-    Achievement,
-    UserAchievement,
-    DailyChallenge,
-    Leaderboard,
-    Notification,
-    CourseReview,
-    MessageReaction,
-)
+import backend.models  # noqa: F401
 
 
 config = context.config

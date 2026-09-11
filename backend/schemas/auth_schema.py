@@ -1,13 +1,13 @@
-from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, ConfigDict
 from backend.models.user import UserRole
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
+
 
 class RegisterSchema(BaseModel):
     email: EmailStr
-    username: str
-    password: str
+    username: str = Field(min_length=3,max_length=50)
+    password: str = Field(min_length=8,max_length=100)
 
 
 class LoginSchema(BaseModel):

@@ -12,5 +12,26 @@ from backend.models.achievement import Achievement, UserAchievement
 from backend.models.challenge import DailyChallenge
 from backend.models.leaderboard import Leaderboard
 from backend.models.notification import Notification
-from backend.models.review import CourseReview
 from backend.models.reaction import MessageReaction
+
+__all__ = [
+    "UserProfile",
+    "Language",
+    "Course",
+    "Lesson",
+    "Exercise",
+    "UserProgress",
+    "XPHistory",
+    "Streak",
+    "Chat",
+    "ChatMember",
+    "Message",
+    "FriendRequest",
+    "Friendship",
+    "Achievement",
+    "UserAchievement",
+    "DailyChallenge",
+    "Leaderboard",
+    "Notification",
+    "MessageReaction",
+]

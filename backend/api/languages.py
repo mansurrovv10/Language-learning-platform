@@ -5,6 +5,8 @@ from backend.database.db import get_session
 from backend.repositories.language_repo import LanguageRepository
 from backend.schemas.language_schema import LanguageCreate, LanguageUpdate, LanguageResponse
 from backend.services.language_service import LanguageService
+from backend.api.auth import require_admin
+from backend.models.user import UserProfile
 
 
 router = APIRouter(prefix="/languages", tags=["Languages"])
@@ -38,7 +40,8 @@ async def get_language(
 @router.post("", response_model=LanguageResponse)
 async def create_language(
     data: LanguageCreate,
-    service: LanguageService = Depends(get_language_service)
+    service: LanguageService = Depends(get_language_service),
+    current_user: UserProfile = Depends(require_admin)
 ):
     return await service.create(data)
 
@@ -47,7 +50,8 @@ async def create_language(
 async def update_language(
     language_id: int,
     data: LanguageUpdate,
-    service: LanguageService = Depends(get_language_service)
+    service: LanguageService = Depends(get_language_service),
+    current_user: UserProfile = Depends(require_admin)
 ):
     language = await service.update(language_id, data)
 
@@ -60,7 +64,8 @@ async def update_language(
 @router.delete("/{language_id}")
 async def delete_language(
     language_id: int,
-    service: LanguageService = Depends(get_language_service)
+    service: LanguageService = Depends(get_language_service),
+    current_user: UserProfile = Depends(require_admin)
 ):
     result = await service.delete(language_id)
 

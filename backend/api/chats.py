@@ -7,6 +7,7 @@ from backend.database.db import SessionLocal
 from backend.api.auth import get_current_user
 from backend.models.user import UserProfile
 from backend.repositories.chat_repo import ChatRepository
+from backend.repositories.reaction_repo import ReactionRepository
 from backend.schemas.chat_schema import (
     ChatCreate,
     ChatResponse,
@@ -39,6 +40,10 @@ def get_chat_service(
     return ChatService(repository)
 
 
+def get_reaction_repository(
+    session: AsyncSession = Depends(get_session)
+) -> ReactionRepository:
+    return ReactionRepository(session)
 
 
 @router.post("/", response_model=ChatResponse)
@@ -62,7 +67,7 @@ async def get_chats(
     current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)
 ):
-    return await service.get_all_chats()
+    return await service.get_user_chats(current_user.id)
 
 
 @router.get("/{chat_id}", response_model=ChatResponse)
@@ -79,8 +84,18 @@ async def get_chat(
             detail="Chat not found"
         )
 
-    return chat
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
 
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    return chat
 
 
 @router.post(
@@ -99,6 +114,28 @@ async def add_member(
         raise HTTPException(
             status_code=404,
             detail="Chat not found"
+        )
+
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    existing_member = await service.get_member(
+        chat_id,
+        data.user_id
+    )
+
+    if existing_member is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is already a member"
         )
 
     return await service.add_member(
@@ -122,6 +159,17 @@ async def get_members(
         raise HTTPException(
             status_code=404,
             detail="Chat not found"
+        )
+
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
         )
 
     return await service.get_members(chat_id)
@@ -155,6 +203,23 @@ async def remove_member(
             detail="Member not found"
         )
 
+    current_member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if current_member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    if user_id != current_user.id and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You can only remove yourself"
+        )
+
     await service.remove_member(
         chat_id,
         user_id
@@ -163,8 +228,6 @@ async def remove_member(
     return {
         "message": "Member removed successfully"
     }
-
-
 
 
 @router.post(
@@ -220,6 +283,17 @@ async def get_messages(
             detail="Chat not found"
         )
 
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
     return await service.get_messages(chat_id)
 
 
@@ -239,6 +313,17 @@ async def get_message(
         raise HTTPException(
             status_code=404,
             detail="Message not found"
+        )
+
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
         )
 
     return message
@@ -293,9 +378,138 @@ async def mark_message_as_read(
             detail="Message not found"
         )
 
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
     return await service.mark_message_as_read(
         message_id
     )
+
+
+@router.post(
+    "/{chat_id}/messages/{message_id}/reactions",
+    response_model=ReactionResponse
+)
+async def add_reaction(
+    chat_id: UUID,
+    message_id: UUID,
+    data: ReactionCreate,
+    current_user: UserProfile = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service),
+    reaction_repository: ReactionRepository = Depends(get_reaction_repository)
+):
+    message = await service.get_message(message_id)
+
+    if message is None or message.chat_id != chat_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Message not found"
+        )
+
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    return await reaction_repository.upsert(
+        message_id,
+        current_user.id,
+        data.reaction.strip()
+    )
+
+
+@router.get(
+    "/{chat_id}/messages/{message_id}/reactions",
+    response_model=list[ReactionResponse]
+)
+async def get_reactions(
+    chat_id: UUID,
+    message_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service),
+    reaction_repository: ReactionRepository = Depends(get_reaction_repository)
+):
+    message = await service.get_message(message_id)
+
+    if message is None or message.chat_id != chat_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Message not found"
+        )
+
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    return await reaction_repository.get_by_message(message_id)
+
+
+@router.delete(
+    "/{chat_id}/messages/{message_id}/reactions"
+)
+async def remove_reaction(
+    chat_id: UUID,
+    message_id: UUID,
+    data: ReactionCreate,
+    current_user: UserProfile = Depends(get_current_user),
+    service: ChatService = Depends(get_chat_service),
+    reaction_repository: ReactionRepository = Depends(get_reaction_repository)
+):
+    message = await service.get_message(message_id)
+
+    if message is None or message.chat_id != chat_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Message not found"
+        )
+
+    member = await service.get_member(
+        chat_id,
+        current_user.id
+    )
+
+    if member is None and current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    removed = await reaction_repository.remove(
+        message_id,
+        current_user.id,
+        data.reaction.strip()
+    )
+
+    if not removed:
+        raise HTTPException(
+            status_code=404,
+            detail="Reaction not found"
+        )
+
+    return {
+        "message": "Reaction removed successfully"
+    }
 
 
 @router.delete(
@@ -315,7 +529,7 @@ async def delete_message(
             detail="Message not found"
         )
 
-    if message.sender_id != current_user.id:
+    if message.sender_id != current_user.id and current_user.role.value != "admin":
         raise HTTPException(
             status_code=403,
             detail="You can only delete your own messages"
@@ -325,145 +539,4 @@ async def delete_message(
 
     return {
         "message": "Message deleted successfully"
-    }
-
-
-
-
-@router.post(
-    "/{chat_id}/messages/{message_id}/reactions",
-    response_model=ReactionResponse
-)
-async def create_reaction(
-    chat_id: UUID,
-    message_id: UUID,
-    data: ReactionCreate,
-    current_user: UserProfile = Depends(get_current_user),
-    service: ChatService = Depends(get_chat_service)
-):
-    message = await service.get_message(message_id)
-
-    if message is None or message.chat_id != chat_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Message not found"
-        )
-
-    member = await service.get_member(
-        chat_id,
-        current_user.id
-    )
-
-    if member is None:
-        raise HTTPException(
-            status_code=403,
-            detail="User is not a member of this chat"
-        )
-
-    existing_reaction = await service.get_reaction(
-        message_id,
-        current_user.id
-    )
-
-    if existing_reaction is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="User already reacted to this message"
-        )
-
-    return await service.create_reaction(
-        message_id,
-        current_user.id,
-        data
-    )
-
-
-@router.get(
-    "/{chat_id}/messages/{message_id}/reactions",
-    response_model=list[ReactionResponse]
-)
-async def get_reactions(
-    chat_id: UUID,
-    message_id: UUID,
-    current_user: UserProfile = Depends(get_current_user),
-    service: ChatService = Depends(get_chat_service)
-):
-    message = await service.get_message(message_id)
-
-    if message is None or message.chat_id != chat_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Message not found"
-        )
-
-    return await service.get_reactions(message_id)
-
-
-@router.get(
-    "/{chat_id}/messages/{message_id}/reactions/me",
-    response_model=ReactionResponse
-)
-async def get_my_reaction(
-    chat_id: UUID,
-    message_id: UUID,
-    current_user: UserProfile = Depends(get_current_user),
-    service: ChatService = Depends(get_chat_service)
-):
-    message = await service.get_message(message_id)
-
-    if message is None or message.chat_id != chat_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Message not found"
-        )
-
-    reaction = await service.get_reaction(
-        message_id,
-        current_user.id
-    )
-
-    if reaction is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Reaction not found"
-        )
-
-    return reaction
-
-
-@router.delete(
-    "/{chat_id}/messages/{message_id}/reactions"
-)
-async def delete_reaction(
-    chat_id: UUID,
-    message_id: UUID,
-    current_user: UserProfile = Depends(get_current_user),
-    service: ChatService = Depends(get_chat_service)
-):
-    message = await service.get_message(message_id)
-
-    if message is None or message.chat_id != chat_id:
-        raise HTTPException(
-            status_code=404,
-            detail="Message not found"
-        )
-
-    reaction = await service.get_reaction(
-        message_id,
-        current_user.id
-    )
-
-    if reaction is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Reaction not found"
-        )
-
-    await service.delete_reaction(
-        message_id,
-        current_user.id
-    )
-
-    return {
-        "message": "Reaction deleted successfully"
     }

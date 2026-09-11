@@ -1,23 +1,27 @@
 import uuid
-from datetime import date, timedelta
+from datetime import date,timedelta
 
 from backend.repositories.gamification_repo import GamificationRepository
 
 
 class GamificationService:
-    def __init__(self, repository: GamificationRepository):
+    def __init__(self,repository: GamificationRepository):
         self.repository = repository
 
-    async def get_xp_history(self, user_id: uuid.UUID):
+    async def get_xp_history(self,user_id: uuid.UUID):
         return await self.repository.get_xp_history(user_id)
 
-    async def add_xp(self, data):
-        return await self.repository.add_xp(data)
+    async def add_xp(self,user_id: uuid.UUID,xp: int,reason: str):
+        return await self.repository.add_xp(
+            user_id,
+            xp,
+            reason
+        )
 
-    async def get_streak(self, user_id: uuid.UUID):
+    async def get_streak(self,user_id: uuid.UUID):
         return await self.repository.get_streak(user_id)
 
-    async def update_streak(self, user_id: uuid.UUID):
+    async def update_streak(self,user_id: uuid.UUID):
         streak = await self.repository.get_streak(user_id)
 
         if not streak:

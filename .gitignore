@@ -1,5 +1,12 @@
-.env 
+.env
 .venv/
 venv/
-__pycache__/ 
-*.pyc 
+__pycache__/
+*.pyc
+*.log
+app.log
+.pytest_cache/
+static/
+media/
+.idea/
+.vscode/

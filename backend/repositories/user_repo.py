@@ -31,3 +31,15 @@ class UserRepository:
     async def delete(self,user):
         await self.db.delete(user)
         await self.db.commit()
+
+    async def set_role(self,user,role):
+        user.role=role
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
+    async def set_active(self,user,is_active):
+        user.is_active=is_active
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user

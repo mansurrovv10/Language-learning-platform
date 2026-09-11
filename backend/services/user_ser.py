@@ -1,4 +1,3 @@
-from backend.models.user import UserProfile
 from backend.services.auth_ser import pwd_context
 from backend.repositories.user_repo import UserRepository
 
@@ -24,3 +23,27 @@ class UserService:
 
     async def delete_user(self,user):
         await self.repository.delete(user)
+
+    async def set_role(self,user_id,role):
+        user=await self.repository.get_by_id(user_id)
+
+        if not user:
+            return None
+
+        return await self.repository.set_role(user,role)
+
+    async def set_active(self,user_id,is_active):
+        user=await self.repository.get_by_id(user_id)
+
+        if not user:
+            return None
+
+        return await self.repository.set_active(user,is_active)
+
+    async def deactivate_user(self,user_id):
+        user=await self.repository.get_by_id(user_id)
+
+        if not user:
+            return None
+
+        return await self.repository.set_active(user,False)

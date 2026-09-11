@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from backend.models.exercise import ExerciseType
 
@@ -28,8 +28,7 @@ class ExerciseResponse(BaseModel):
     question: str
     options: dict
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExerciseSubmit(BaseModel):

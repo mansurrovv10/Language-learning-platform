@@ -5,6 +5,8 @@ from backend.database.db import get_session
 from backend.repositories.course_repo import CourseRepository
 from backend.schemas.course_schema import CourseCreate, CourseUpdate, CourseResponse
 from backend.services.course_service import CourseService
+from backend.api.auth import require_admin
+from backend.models.user import UserProfile
 
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
@@ -16,7 +18,9 @@ def get_course_service(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("", response_model=list[CourseResponse])
-async def get_courses(service: CourseService = Depends(get_course_service)):
+async def get_courses(
+    service: CourseService = Depends(get_course_service)
+):
     return await service.get_all()
 
 
@@ -44,7 +48,8 @@ async def get_courses_by_language(
 @router.post("", response_model=CourseResponse)
 async def create_course(
     data: CourseCreate,
-    service: CourseService = Depends(get_course_service)
+    service: CourseService = Depends(get_course_service),
+    current_user: UserProfile = Depends(require_admin)
 ):
     return await service.create(data)
 
@@ -53,7 +58,8 @@ async def create_course(
 async def update_course(
     course_id: int,
     data: CourseUpdate,
-    service: CourseService = Depends(get_course_service)
+    service: CourseService = Depends(get_course_service),
+    current_user: UserProfile = Depends(require_admin)
 ):
     course = await service.update(course_id, data)
 
@@ -66,7 +72,8 @@ async def update_course(
 @router.delete("/{course_id}")
 async def delete_course(
     course_id: int,
-    service: CourseService = Depends(get_course_service)
+    service: CourseService = Depends(get_course_service),
+    current_user: UserProfile = Depends(require_admin)
 ):
     result = await service.delete(course_id)
 

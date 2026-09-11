@@ -8,62 +8,83 @@ from backend.models.progress import UserProgress
 
 
 class ProgressRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self,session: AsyncSession):
         self.session = session
 
     async def get_all(self):
-        result = await self.session.execute(select(UserProgress))
+        result = await self.session.execute(
+            select(UserProgress)
+        )
         return result.scalars().all()
 
-    async def get_by_id(self, progress_id: int):
+    async def get_by_id(self,progress_id: int):
         result = await self.session.execute(
-            select(UserProgress).where(UserProgress.id == progress_id)
+            select(UserProgress).where(
+                UserProgress.id == progress_id
+            )
         )
         return result.scalar_one_or_none()
 
-    async def get_by_user(self, user_id: uuid.UUID):
+    async def get_by_user(self,user_id: uuid.UUID):
         result = await self.session.execute(
-            select(UserProgress).where(UserProgress.user_id == user_id)
+            select(UserProgress).where(
+                UserProgress.user_id == user_id
+            )
         )
         return result.scalars().all()
 
-    async def get_by_lesson(self, lesson_id: int):
+    async def get_by_lesson(self,lesson_id: int):
         result = await self.session.execute(
-            select(UserProgress).where(UserProgress.lesson_id == lesson_id)
+            select(UserProgress).where(
+                UserProgress.lesson_id == lesson_id
+            )
         )
         return result.scalars().all()
 
-    async def create(self, data):
+    async def get_by_user_and_lesson(self,user_id: uuid.UUID,lesson_id: int):
+        result = await self.session.execute(
+            select(UserProgress).where(
+                UserProgress.user_id == user_id,
+                UserProgress.lesson_id == lesson_id
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def create(self,user_id: uuid.UUID,lesson_id: int,completed: bool = False,score: int = 0):
         progress = UserProgress(
-            user_id=data.user_id,
-            lesson_id=data.lesson_id,
-            completed=data.completed,
-            score=data.score
+            user_id=user_id,
+            lesson_id=lesson_id,
+            completed=completed,
+            score=score
         )
+
         self.session.add(progress)
         await self.session.commit()
         await self.session.refresh(progress)
+
         return progress
 
-    async def update(self, progress_id: int, data):
+    async def update(self,progress_id: int,completed: bool | None = None,score: int | None = None):
         progress = await self.get_by_id(progress_id)
 
         if not progress:
             return None
 
-        if data.completed is not None:
-            progress.completed = data.completed
-            if data.completed:
+        if completed is not None:
+            progress.completed = completed
+
+            if completed:
                 progress.completed_at = datetime.utcnow()
 
-        if data.score is not None:
-            progress.score = data.score
+        if score is not None:
+            progress.score = score
 
         await self.session.commit()
         await self.session.refresh(progress)
+
         return progress
 
-    async def delete(self, progress_id: int):
+    async def delete(self,progress_id: int):
         progress = await self.get_by_id(progress_id)
 
         if not progress:
@@ -71,4 +92,5 @@ class ProgressRepository:
 
         await self.session.delete(progress)
         await self.session.commit()
+
         return True

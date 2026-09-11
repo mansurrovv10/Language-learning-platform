@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel,ConfigDict
 
 from backend.models.chat import ChatType
 
@@ -17,9 +17,7 @@ class ChatResponse(BaseModel):
     language_id: int | None
     created_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChatMemberCreate(BaseModel):
@@ -31,9 +29,7 @@ class ChatMemberResponse(BaseModel):
     user_id: uuid.UUID
     joined_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageCreate(BaseModel):
@@ -52,9 +48,7 @@ class MessageResponse(BaseModel):
     created_at: datetime
     is_read: bool
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReactionCreate(BaseModel):
@@ -68,6 +62,4 @@ class ReactionResponse(BaseModel):
     reaction: str
     created_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
