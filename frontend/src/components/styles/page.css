@@ -1,0 +1,161 @@
+.page {
+  min-height: 100vh;
+  background: #fff;
+  color: #171717;
+  position: relative;
+  font-family: Arial, sans-serif;
+}
+
+.page-header {
+  height: 72px;
+  border-bottom: 1px solid #ededed;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+
+.page-header-icon {
+  font-size: 21px;
+  color: #555;
+}
+
+.page-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.page-content {
+  max-width: 760px;
+  margin: 70px auto 0;
+  text-align: center;
+}
+
+.page-icon {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 22px;
+  border-radius: 15px;
+  background: #181818;
+  color: #f5c542;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+}
+
+.page-content h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.page-content > p {
+  margin: 20px 0 36px;
+  color: #999;
+  font-size: 14px;
+}
+
+.suggestions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.suggestion {
+  min-height: 70px;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.suggestion:hover {
+  background: #fafafa;
+  border-color: #d8d8d8;
+}
+
+.suggestion-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: #f6f6f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 17px;
+}
+
+.suggestion h3 {
+  margin: 0 0 5px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.suggestion span {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.message-box {
+  position: fixed;
+  bottom: 18px;
+  left: calc(50% + 130px);
+  transform: translateX(-50%);
+  width: min(735px, calc(100% - 40px));
+  height: 54px;
+  border: 1px solid #e5e5e5;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 16px;
+}
+
+.message-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #222;
+}
+
+.message-box input::placeholder {
+  color: #aaa;
+}
+
+.message-box button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #bdbdbd;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .page-content {
+    margin: 45px 20px 100px;
+  }
+
+  .suggestions {
+    grid-template-columns: 1fr;
+  }
+
+  .message-box {
+    left: 50%;
+    width: calc(100% - 30px);
+  }
+}
