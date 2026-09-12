@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from backend.logging_conf import setup_logging
 from backend.middleware import LoggingMiddleware,RateLimitMiddleware
@@ -22,12 +23,19 @@ setup_logging()
 
 duolingo = FastAPI(title="Mini Duolingo")
 
+duolingo.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
 duolingo.add_middleware(RateLimitMiddleware)
 duolingo.add_middleware(LoggingMiddleware)
 
 duolingo.include_router(chats_router)
 duolingo.include_router(websocket_router)
-
 
 duolingo.include_router(auth_router)
 duolingo.include_router(user_router)
@@ -43,11 +51,9 @@ duolingo.include_router(challange_router)
 duolingo.include_router(leaderboard_router)
 duolingo.include_router(notifications_router)
 
-
 @duolingo.get("/health")
 async def health():
     return {"status": "ok"}
-
 
 if __name__ == '__main__':
     uvicorn.run(duolingo, host="127.0.0.1", port=8000)
