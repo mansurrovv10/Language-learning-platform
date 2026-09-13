@@ -11,7 +11,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
+      DATABASE_URL: postgresql+asyncpg://postgres:admin@db:5432/duolingo
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: change-me-in-production
     depends_on:
@@ -22,9 +22,9 @@ services:
     image: postgres:17
     restart: always
     environment:
-      POSTGRES_DB: postgres
+      POSTGRES_DB: duolingo
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: admin
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
