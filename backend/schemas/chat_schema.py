@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel,ConfigDict
 
 from backend.models.chat import ChatType
+from backend.schemas.public_schema import PublicUserSchema
 
 
 class ChatCreate(BaseModel):
@@ -27,6 +28,7 @@ class ChatMemberCreate(BaseModel):
 class ChatMemberResponse(BaseModel):
     chat_id: uuid.UUID
     user_id: uuid.UUID
+    user: PublicUserSchema
     joined_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -44,6 +46,7 @@ class MessageResponse(BaseModel):
     id: uuid.UUID
     chat_id: uuid.UUID
     sender_id: uuid.UUID
+    sender: PublicUserSchema
     content: str
     created_at: datetime
     is_read: bool

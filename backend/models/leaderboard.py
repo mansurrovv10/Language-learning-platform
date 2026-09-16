@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import ForeignKey, Integer, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.base import Base
 
@@ -16,3 +16,5 @@ class Leaderboard(Base):
     xp: Mapped[int] = mapped_column(Integer,default=0)
     rank: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+    user: Mapped["UserProfile"] = relationship(lazy="joined")

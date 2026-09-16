@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import Text,ForeignKey,DateTime,Boolean
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped,mapped_column
+from sqlalchemy.orm import Mapped,mapped_column,relationship
 
 from backend.database.base import Base
 
@@ -17,3 +17,5 @@ class Message(Base):
     content: Mapped[str] = mapped_column(Text,nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)
     is_read: Mapped[bool] = mapped_column(Boolean,default=False)
+
+    sender: Mapped["UserProfile"] = relationship(lazy="joined")

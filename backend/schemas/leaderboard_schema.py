@@ -2,10 +2,12 @@ import uuid
 from datetime import datetime
 
 from pydantic import BaseModel,ConfigDict
+from backend.schemas.public_schema import PublicUserSchema
 
 
 class LeaderboardResponse(BaseModel):
     user_id: uuid.UUID
+    user: PublicUserSchema
     xp: int
     rank: int
     updated_at: datetime

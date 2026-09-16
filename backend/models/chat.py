@@ -4,7 +4,7 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import ForeignKey,Integer,DateTime,Enum
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped,mapped_column
+from sqlalchemy.orm import Mapped,mapped_column,relationship
 
 from backend.database.base import Base
 
@@ -29,3 +29,5 @@ class ChatMember(Base):
     chat_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("chat.id"),primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"),primary_key=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)
+
+    user: Mapped["UserProfile"] = relationship(lazy="joined")
