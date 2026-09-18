@@ -104,17 +104,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table(
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('type', sa.Enum('FRIEND_REQUEST', 'ACHIEVEMENT', 'MESSAGE', 'SYSTEM', name='notificationtype'), nullable=False),
-    sa.Column('title', sa.String(), nullable=False),
-    sa.Column('message', sa.String(), nullable=False),
-    sa.Column('is_read', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('streak',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -188,15 +177,6 @@ def upgrade() -> None:
     sa.Column('options', sa.JSON(), nullable=False),
     sa.Column('correct_answer', sa.JSON(), nullable=False),
     sa.ForeignKeyConstraint(['lesson_id'], ['lesson.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table(
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('message_id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['message_id'], ['message.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('user_progress',

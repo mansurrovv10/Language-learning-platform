@@ -5,11 +5,14 @@ from backend.database.db import get_session
 from backend.repositories.exercise_repo import ExerciseRepository
 from backend.repositories.progress_repo import ProgressRepository
 from backend.repositories.gamification_repo import GamificationRepository
+from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
 from backend.schemas.exercise_schema import (ExerciseCreate,ExerciseUpdate,ExerciseResponse,
                                              ExerciseSubmit,ExerciseResult)
 from backend.services.exercise_service import ExerciseService
 from backend.api.auth import get_current_user,require_admin
 from backend.models.user import UserProfile
+from backend.repositories.learning_path_repo import LearningPathRepository
+from backend.services.learning_path_service import LearningPathService
 
 
 router = APIRouter(prefix="/exercises",tags=["Exercises"])
@@ -18,31 +21,44 @@ router = APIRouter(prefix="/exercises",tags=["Exercises"])
 def get_exercise_service(session: AsyncSession = Depends(get_session)):
     exercise_repository = ExerciseRepository(session)
     progress_repository = ProgressRepository(session)
+    exercise_progress_repository = ExerciseProgressRepository(session)
     gamification_repository = GamificationRepository(session)
     achievement_repository = AchievementRepository(session)
 
-    return ExerciseService(exercise_repository,progress_repository,gamification_repository,achievement_repository)
+    return ExerciseService(exercise_repository,progress_repository,exercise_progress_repository,
+        gamification_repository,achievement_repository)
+
+
+def get_learning_path_service(session: AsyncSession = Depends(get_session)):
+    return LearningPathService(LearningPathRepository(session))
 
 
 @router.get("",response_model=list[ExerciseResponse])
 async def get_exercises(service: ExerciseService = Depends(get_exercise_service),
-    current_user: UserProfile = Depends(get_current_user)):
+    current_user: UserProfile = Depends(require_admin)):
     return await service.get_all()
 
 
 @router.get("/lesson/{lesson_id}",response_model=list[ExerciseResponse])
 async def get_exercises_by_lesson(lesson_id: int,service: ExerciseService = Depends(get_exercise_service),
-    current_user: UserProfile = Depends(get_current_user)):
+    current_user: UserProfile = Depends(get_current_user),
+    access_service: LearningPathService = Depends(get_learning_path_service)):
+    if current_user.role.value != "admin":
+        await access_service.ensure_lesson_access(current_user.id,lesson_id)
     return await service.get_by_lesson(lesson_id)
 
 
 @router.get("/{exercise_id}",response_model=ExerciseResponse)
 async def get_exercise(exercise_id: int,service: ExerciseService = Depends(get_exercise_service),
-        current_user: UserProfile = Depends(get_current_user)):
+        current_user: UserProfile = Depends(get_current_user),
+        access_service: LearningPathService = Depends(get_learning_path_service)):
     exercise = await service.get_by_id(exercise_id)
 
     if not exercise:
         raise HTTPException(status_code=404,detail="Exercise not found")
+
+    if current_user.role.value != "admin":
+        await access_service.ensure_lesson_access(current_user.id,exercise.lesson_id)
 
     return exercise
 
@@ -83,8 +99,14 @@ async def submit_exercise(
     exercise_id: int,
     data: ExerciseSubmit,
     service: ExerciseService = Depends(get_exercise_service),
-    current_user: UserProfile = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user),
+    access_service: LearningPathService = Depends(get_learning_path_service)
 ):
+    exercise = await service.get_by_id(exercise_id)
+    if not exercise:
+        raise HTTPException(status_code=404,detail="Exercise not found")
+    if current_user.role.value != "admin":
+        await access_service.ensure_lesson_access(current_user.id,exercise.lesson_id)
     result = await service.submit_exercise(
         exercise_id,
         data,

@@ -7,6 +7,8 @@ from backend.schemas.lessons_schema import LessonCreate, LessonUpdate, LessonRes
 from backend.services.lessons_service import LessonService
 from backend.api.auth import get_current_user, require_admin
 from backend.models.user import UserProfile
+from backend.repositories.learning_path_repo import LearningPathRepository
+from backend.services.learning_path_service import LearningPathService
 
 
 router = APIRouter(prefix="/lessons", tags=["Lessons"])
@@ -17,22 +19,32 @@ def get_lesson_service(session: AsyncSession = Depends(get_session)):
     return LessonService(repository)
 
 
+def get_learning_path_service(session: AsyncSession = Depends(get_session)):
+    return LearningPathService(LearningPathRepository(session))
+
+
 @router.get("", response_model=list[LessonResponse])
 async def get_lessons(
     service: LessonService = Depends(get_lesson_service),
-    current_user: UserProfile = Depends(get_current_user)):
+    current_user: UserProfile = Depends(require_admin)):
     return await service.get_all()
 
 
 @router.get("/course/{course_id}", response_model=list[LessonResponse])
 async def get_lessons_by_course(course_id: int,service: LessonService = Depends(get_lesson_service),
-    current_user: UserProfile = Depends(get_current_user)):
+    current_user: UserProfile = Depends(get_current_user),
+    access_service: LearningPathService = Depends(get_learning_path_service)):
+    if current_user.role.value != "admin":
+        await access_service.ensure_course_access(current_user.id,course_id)
     return await service.get_by_course(course_id)
 
 
 @router.get("/{lesson_id}", response_model=LessonResponse)
 async def get_lesson(lesson_id: int,service: LessonService = Depends(get_lesson_service),
-          current_user: UserProfile = Depends(get_current_user)):
+          current_user: UserProfile = Depends(get_current_user),
+          access_service: LearningPathService = Depends(get_learning_path_service)):
+    if current_user.role.value != "admin":
+        await access_service.ensure_lesson_access(current_user.id,lesson_id)
     lesson = await service.get_by_id(lesson_id)
 
     if not lesson:

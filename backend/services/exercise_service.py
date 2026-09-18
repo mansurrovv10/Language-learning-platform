@@ -6,6 +6,7 @@ from backend.repositories.exercise_repo import ExerciseRepository
 from backend.repositories.progress_repo import ProgressRepository
 from backend.repositories.gamification_repo import GamificationRepository
 from backend.repositories.achievement_repo import AchievementRepository
+from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
 from backend.schemas.exercise_schema import ExerciseCreate,ExerciseUpdate,ExerciseResult,ExerciseSubmit
 from backend.services.achievement_service import AchievementService
 
@@ -15,10 +16,12 @@ class ExerciseService:
         self,
         repository: ExerciseRepository,
         progress_repository: ProgressRepository,
+        exercise_progress_repository: ExerciseProgressRepository,
         gamification_repository: GamificationRepository,
         achievement_repository: AchievementRepository):
         self.repository = repository
         self.progress_repository = progress_repository
+        self.exercise_progress_repository = exercise_progress_repository
         self.gamification_repository = gamification_repository
         self.achievement_service = AchievementService(
             achievement_repository,
@@ -70,28 +73,22 @@ class ExerciseService:
         correct = self._check_answer(exercise,data.answer)
         score = 10 if correct else 0
 
-        progress = await self.progress_repository.get_by_user_and_lesson(
-            user_id,
-            exercise.lesson_id)
-
-        already_completed = progress.completed if progress else False
+        exercise_progress = await self.exercise_progress_repository.get_by_user_and_exercise(
+            user_id,exercise.id)
+        already_exercise_completed = exercise_progress.completed if exercise_progress else False
+        await self.exercise_progress_repository.save_result(user_id,exercise.id,correct,score)
+        progress = await self.progress_repository.get_by_user_and_lesson(user_id,exercise.lesson_id)
+        lesson_completed = await self.exercise_progress_repository.are_lesson_exercises_completed(
+            user_id,exercise.lesson_id)
 
         if progress:
-            if correct and score > progress.score:
-                await self.progress_repository.update(
-                    progress.id,
-                    completed=True,
-                    score=score
-                )
+            if lesson_completed and not progress.completed:
+                await self.progress_repository.update(progress.id,completed=True,score=100)
         else:
-            await self.progress_repository.create(
-                user_id=user_id,
-                lesson_id=exercise.lesson_id,
-                completed=correct,
-                score=score
-            )
+            await self.progress_repository.create(user_id=user_id,lesson_id=exercise.lesson_id,
+                completed=lesson_completed,score=100 if lesson_completed else 0)
 
-        if correct and not already_completed:
+        if correct and not already_exercise_completed:
             await self.gamification_repository.add_xp(
                 user_id=user_id,
                 xp=10,

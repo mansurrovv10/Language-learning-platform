@@ -11,6 +11,9 @@ from backend.models.social import FriendRequest, Friendship
 from backend.models.achievement import Achievement, UserAchievement
 from backend.models.challenge import DailyChallenge
 from backend.models.leaderboard import Leaderboard
+from backend.models.level_test import LevelTest, LevelTestQuestion, LevelTestAttempt
+from backend.models.user_language import UserLanguage
+from backend.models.exercise_progress import UserExerciseProgress
 
 
 __all__ = [
@@ -31,4 +34,9 @@ __all__ = [
     "UserAchievement",
     "DailyChallenge",
     "Leaderboard",
+    "LevelTest",
+    "LevelTestQuestion",
+    "LevelTestAttempt",
+    "UserLanguage",
+    "UserExerciseProgress",
 ]

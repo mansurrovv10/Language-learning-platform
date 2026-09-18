@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from backend.logging_conf import setup_logging
+from backend.config import settings
 from backend.middleware import LoggingMiddleware,RateLimitMiddleware
 from backend.api.auth import auth_router
 from backend.api.users import user_router
@@ -17,6 +18,8 @@ from backend.api.progress import router as progress_router
 from backend.api.achievement import router as achievement_router
 from backend.api.challange import router as challange_router
 from backend.api.leaderboard import router as leaderboard_router
+from backend.api.level_tests import router as level_tests_router
+from backend.api.learning_path import router as learning_path_router
 
 setup_logging()
 
@@ -27,7 +30,7 @@ duolingo.add_middleware(LoggingMiddleware)
 
 duolingo.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"])
@@ -47,6 +50,8 @@ duolingo.include_router(progress_router)
 duolingo.include_router(achievement_router)
 duolingo.include_router(challange_router)
 duolingo.include_router(leaderboard_router)
+duolingo.include_router(level_tests_router)
+duolingo.include_router(learning_path_router)
 
 
 @duolingo.get("/health")

@@ -23,13 +23,13 @@ async def get_leaderboard(limit: int = 10,service: LeaderboardService = Depends(
     return await service.get_leaderboard(limit)
 
 
-@router.get("/{user_id}",response_model=UserLeaderboardResponse)
-async def get_user_rank(user_id: uuid.UUID,service: LeaderboardService = Depends(get_leaderboard_service),
-    current_user: UserProfile = Depends(get_current_user)):
-    return await service.get_user(user_id)
-
-
 @router.post("/refresh")
 async def refresh_leaderboard(service: LeaderboardService = Depends(get_leaderboard_service),
     current_user: UserProfile = Depends(require_admin)):
     return await service.refresh()
+
+
+@router.get("/{user_id}",response_model=UserLeaderboardResponse)
+async def get_user_rank(user_id: uuid.UUID,service: LeaderboardService = Depends(get_leaderboard_service),
+    current_user: UserProfile = Depends(get_current_user)):
+    return await service.get_user(user_id)
