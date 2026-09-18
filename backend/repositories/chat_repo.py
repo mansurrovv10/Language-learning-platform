@@ -1,10 +1,9 @@
 from uuid import UUID
-
 from sqlalchemy import delete,select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from backend.models.chat import Chat,ChatMember
 from backend.models.message import Message
+from backend.models.user import UserProfile
 
 
 class ChatRepository:
@@ -18,25 +17,24 @@ class ChatRepository:
         await self.session.refresh(chat)
         return chat
 
-    async def get_by_id(self,chat_id: UUID) -> Chat | None:
-        result = await self.session.execute(
-            select(Chat).where(Chat.id == chat_id)
-        )
+    async def get_by_id(self,chat_id: UUID):
+        result = await self.session.execute(select(Chat).where(Chat.id == chat_id))
         return result.scalar_one_or_none()
 
-    async def get_all(self) -> list[Chat]:
-        result = await self.session.execute(
-            select(Chat)
-        )
+    async def get_all(self):
+        result = await self.session.execute(select(Chat))
         return list(result.scalars().all())
 
-    async def get_user_chats(self,user_id: UUID) -> list[Chat]:
-        result = await self.session.execute(
-            select(Chat)
+    async def get_user_chats(self,user_id: UUID):
+        result = await self.session.execute(select(Chat)
             .join(ChatMember,Chat.id == ChatMember.chat_id)
-            .where(ChatMember.user_id == user_id)
-        )
+            .where(ChatMember.user_id == user_id))
         return list(result.scalars().all())
+
+    async def get_user_by_username(self,username: str):
+        result = await self.session.execute(
+            select(UserProfile).where(UserProfile.username == username))
+        return result.scalar_one_or_none()
 
     async def add_member(self,member: ChatMember) -> ChatMember:
         self.session.add(member)
@@ -46,52 +44,41 @@ class ChatRepository:
 
     async def get_member(self,chat_id: UUID,user_id: UUID) -> ChatMember | None:
         result = await self.session.execute(
-            select(ChatMember).where(
-                ChatMember.chat_id == chat_id,
-                ChatMember.user_id == user_id
-            )
-        )
+            select(ChatMember).where(ChatMember.chat_id == chat_id,ChatMember.user_id == user_id))
         return result.scalar_one_or_none()
 
-    async def get_members(self,chat_id: UUID) -> list[ChatMember]:
+    async def get_members(self,chat_id: UUID):
         result = await self.session.execute(
-            select(ChatMember).where(
-                ChatMember.chat_id == chat_id
-            )
-        )
+            select(ChatMember).where(ChatMember.chat_id == chat_id))
         return list(result.scalars().all())
 
-    async def remove_member(self,chat_id: UUID,user_id: UUID) -> bool:
+    async def remove_member(self,chat_id: UUID,user_id: UUID):
         result = await self.session.execute(
             delete(ChatMember).where(
                 ChatMember.chat_id == chat_id,
-                ChatMember.user_id == user_id
-            )
-        )
+                ChatMember.user_id == user_id))
         await self.session.commit()
         return result.rowcount > 0
 
-    async def create_message(self,message: Message) -> Message:
+    async def create_message(self,message: Message):
         self.session.add(message)
         await self.session.commit()
         await self.session.refresh(message)
         return message
 
-    async def get_messages(self,chat_id: UUID) -> list[Message]:
+    async def get_messages(self,chat_id: UUID):
         result = await self.session.execute(
             select(Message)
             .where(Message.chat_id == chat_id)
-            .order_by(Message.created_at)
-        )
+            .order_by(Message.created_at))
         return list(result.scalars().all())
 
     async def get_message(self,message_id: UUID) -> Message | None:
         result = await self.session.execute(
-            select(Message).where(Message.id == message_id)
-        )
+            select(Message).where(Message.id == message_id))
         return result.scalar_one_or_none()
 
-    async def update_message(self,message_id: UUID,content: str) -> Message | None:
+    async def update_message(self,message_id: UUID,content: str):
         message = await self.get_message(message_id)
 
         if message is None:
@@ -104,7 +91,7 @@ class ChatRepository:
 
         return message
 
-    async def mark_message_as_read(self,message_id: UUID) -> Message | None:
+    async def mark_message_as_read(self,message_id: UUID):
         message = await self.get_message(message_id)
 
         if message is None:
@@ -117,11 +104,8 @@ class ChatRepository:
 
         return message
 
-    async def delete_message(self,message_id: UUID) -> bool:
+    async def delete_message(self,message_id: UUID):
         result = await self.session.execute(
-            delete(Message).where(
-                Message.id == message_id
-            )
-        )
+            delete(Message).where(Message.id == message_id))
         await self.session.commit()
         return result.rowcount > 0

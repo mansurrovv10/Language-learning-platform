@@ -5,7 +5,6 @@ from typing import List
 from sqlalchemy import String, Boolean, DateTime, Enum, Integer,ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from backend.database.base import Base
 
 

@@ -26,4 +26,3 @@ class Friendship(Base):
     friend_id:Mapped[uuid.UUID]=mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
 
-# FriendRequest отвечает за заявки, а Friendship отвечает за уже состоящих в дружбе пользователей.

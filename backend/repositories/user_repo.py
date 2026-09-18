@@ -1,6 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import UserProfile
+from backend.models.social import FriendRequest, Friendship
 
 class UserRepository:
     def __init__(self,db:AsyncSession):
@@ -18,6 +19,13 @@ class UserRepository:
         result=await self.db.execute(select(UserProfile).where(UserProfile.username==username))
         return result.scalar_one_or_none()
 
+    async def search(self,query,limit=10):
+        result=await self.db.execute(
+            select(UserProfile)
+            .where(UserProfile.username.ilike(f"%{query}%"))
+            .limit(limit))
+        return result.scalars().all()
+
     async def get_all(self):
         result=await self.db.execute(select(UserProfile))
         return result.scalars().all()
@@ -29,6 +37,14 @@ class UserRepository:
         return user
 
     async def delete(self,user):
+        await self.db.execute(
+            delete(FriendRequest).where(
+                (FriendRequest.sender_id==user.id) |
+                (FriendRequest.receiver_id==user.id)))
+        await self.db.execute(
+            delete(Friendship).where(
+                (Friendship.user_id==user.id) |
+                (Friendship.friend_id==user.id)))
         await self.db.delete(user)
         await self.db.commit()
 

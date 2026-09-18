@@ -7,7 +7,11 @@ class FriendRepository:
         self.db=db
 
     async def get_request(self,sender_id,receiver_id):
-        result=await self.db.execute(select(FriendRequest).where(FriendRequest.sender_id==sender_id,FriendRequest.receiver_id==receiver_id))
+        result=await self.db.execute(select(FriendRequest).where(
+            FriendRequest.sender_id==sender_id,
+            FriendRequest.receiver_id==receiver_id,
+            FriendRequest.status==FriendRequestStatus.PENDING
+        ))
         return result.scalar_one_or_none()
 
     async def get_request_by_id(self,request_id):

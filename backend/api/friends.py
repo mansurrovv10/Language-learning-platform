@@ -12,9 +12,11 @@ async def get_db():
     async with SessionLocal() as db:
         yield db
 
-@friend_router.post("/request",response_model=FriendRequestResponse)
-async def send_request(data:FriendRequestCreate,current_user:UserProfile=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
-    return await FriendService(db).send_request(current_user.id,data.receiver_id)
+@friend_router.post("/request", response_model=FriendRequestResponse)
+async def send_request(data: FriendRequestCreate,current_user:
+UserProfile = Depends(get_current_user),db: AsyncSession = Depends(get_db)):
+    return await FriendService(db).send_request(current_user.id, data.username)
+
 
 @friend_router.post("/request/{request_id}/accept",response_model=FriendRequestResponse)
 async def accept_request(request_id:int,current_user:UserProfile=Depends(get_current_user),db:AsyncSession=Depends(get_db)):

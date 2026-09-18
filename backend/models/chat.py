@@ -18,6 +18,7 @@ class Chat(Base):
     __tablename__ = "chat"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
+    creator_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"),nullable=False)
     type: Mapped[ChatType] = mapped_column(Enum(ChatType),nullable=False)
     language_id: Mapped[int | None] = mapped_column(Integer,ForeignKey("language.id"),nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)

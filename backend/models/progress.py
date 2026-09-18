@@ -12,8 +12,7 @@ class UserProgress(Base):
     __tablename__ = "user_progress"
 
     __table_args__ = (
-        UniqueConstraint("user_id","lesson_id",name="uq_user_progress_user_lesson"),
-    )
+        UniqueConstraint("user_id","lesson_id",name="uq_user_progress_user_lesson"),)
 
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))

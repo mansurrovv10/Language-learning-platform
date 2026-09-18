@@ -22,7 +22,7 @@ class ChatResponse(BaseModel):
 
 
 class ChatMemberCreate(BaseModel):
-    user_id: uuid.UUID
+    username: str
 
 
 class ChatMemberResponse(BaseModel):
@@ -50,19 +50,5 @@ class MessageResponse(BaseModel):
     content: str
     created_at: datetime
     is_read: bool
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ReactionCreate(BaseModel):
-    reaction: str
-
-
-class ReactionResponse(BaseModel):
-    id: int
-    message_id: uuid.UUID
-    user_id: uuid.UUID
-    reaction: str
-    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

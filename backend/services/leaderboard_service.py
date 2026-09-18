@@ -1,5 +1,4 @@
 import uuid
-
 from backend.repositories.leaderboard_repo import LeaderboardRepository
 
 

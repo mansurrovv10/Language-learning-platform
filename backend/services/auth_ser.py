@@ -48,8 +48,7 @@ class AuthService:
         user = UserProfile(
             email=email,
             username=username,
-            password_hash=self.get_password_hash(password)
-        )
+            password_hash=self.get_password_hash(password))
 
         return await self.repository.create_user(user)
 

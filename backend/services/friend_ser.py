@@ -1,40 +1,26 @@
 from sqlalchemy import select
 from fastapi import HTTPException
 from backend.models.social import FriendRequest,Friendship,FriendRequestStatus
-from backend.models.notification import NotificationType
 from backend.models.user import UserProfile
 from backend.repositories.friend_repo import FriendRepository
-from backend.repositories.notification_repo import NotificationRepository
 
 class FriendService:
     def __init__(self,db):
         self.repository=FriendRepository(db)
-        self.notification_repository=NotificationRepository(db)
 
-    async def send_request(self,sender_id,receiver_id):
-        if sender_id==receiver_id:
-            raise HTTPException(status_code=400,detail="You cannot send request to yourself")
-        result=await self.repository.db.execute(select(UserProfile).where(UserProfile.id==receiver_id))
-        receiver=result.scalar_one_or_none()
+    async def send_request(self, sender_id, username):
+        result = await self.repository.db.execute(select(UserProfile).where(UserProfile.username == username))
+        receiver = result.scalar_one_or_none()
         if not receiver:
-            raise HTTPException(status_code=404,detail="User not found")
-        if await self.repository.get_friendship(sender_id,receiver_id):
-            raise HTTPException(status_code=400,detail="Already friends")
-        if await self.repository.get_request(sender_id,receiver_id):
-            raise HTTPException(status_code=400,detail="Request already exists")
-        request=FriendRequest(sender_id=sender_id,receiver_id=receiver_id)
-
-        sender_result=await self.repository.db.execute(select(UserProfile).where(UserProfile.id==sender_id))
-        sender=sender_result.scalar_one_or_none()
-        sender_name=sender.username if sender else str(sender_id)
-
-        await self.notification_repository.create(
-            user_id=receiver_id,
-            type=NotificationType.FRIEND_REQUEST,
-            title="New friend request",
-            message=f"{sender_name} sent you a friend request"
-        )
-
+            raise HTTPException(status_code=404, detail="User not found")
+        if sender_id == receiver.id:
+            raise HTTPException(status_code=400, detail="You cannot send request to yourself")
+        if await self.repository.get_friendship(sender_id, receiver.id) or await self.repository.get_friendship(
+                receiver.id, sender_id):
+            raise HTTPException(status_code=400, detail="Already friends")
+        if await self.repository.get_request(sender_id, receiver.id):
+            raise HTTPException(status_code=400, detail="Request already exists")
+        request = FriendRequest(sender_id=sender_id, receiver_id=receiver.id)
         return await self.repository.create_request(request)
 
     async def accept_request(self,request_id,user_id):

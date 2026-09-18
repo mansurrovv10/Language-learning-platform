@@ -11,17 +11,34 @@ class UserService:
     async def get_users(self):
         return await self.repository.get_all()
 
+    async def search_users(self,query,limit=10):
+        return await self.repository.search(query,limit)
+
     async def update_user(self,user,data):
+        user=await self.repository.get_by_id(user.id)
+
+        if not user:
+            return None
+
         update_data=data.model_dump(exclude_unset=True)
+
         if "password" in update_data:
             update_data["password_hash"]=pwd_context.hash(update_data.pop("password"))
+
         for key,value in update_data.items():
             setattr(user,key,value)
+
         await self.repository.db.commit()
         await self.repository.db.refresh(user)
+
         return user
 
     async def delete_user(self,user):
+        user=await self.repository.get_by_id(user.id)
+
+        if not user:
+            return None
+
         await self.repository.delete(user)
 
     async def set_role(self,user_id,role):

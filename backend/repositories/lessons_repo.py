@@ -1,6 +1,5 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from backend.models.lesson import Lesson
 
 
@@ -14,16 +13,14 @@ class LessonRepository:
 
     async def get_by_id(self, lesson_id: int):
         result = await self.session.execute(
-            select(Lesson).where(Lesson.id == lesson_id)
-        )
+            select(Lesson).where(Lesson.id == lesson_id))
         return result.scalar_one_or_none()
 
     async def get_by_course(self, course_id: int):
         result = await self.session.execute(
             select(Lesson)
             .where(Lesson.course_id == course_id)
-            .order_by(Lesson.order)
-        )
+            .order_by(Lesson.order))
         return result.scalars().all()
 
     async def create(self, data):
@@ -31,8 +28,7 @@ class LessonRepository:
             course_id=data.course_id,
             title=data.title,
             order=data.order,
-            is_locked=data.is_locked
-        )
+            is_locked=data.is_locked)
         self.session.add(lesson)
         await self.session.commit()
         await self.session.refresh(lesson)

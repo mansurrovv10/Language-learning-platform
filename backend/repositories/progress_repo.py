@@ -1,9 +1,7 @@
 import uuid
 from datetime import datetime
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from backend.models.progress import UserProgress
 
 
@@ -12,42 +10,30 @@ class ProgressRepository:
         self.session = session
 
     async def get_all(self):
-        result = await self.session.execute(
-            select(UserProgress)
-        )
+        result = await self.session.execute(select(UserProgress))
         return result.scalars().all()
 
     async def get_by_id(self,progress_id: int):
         result = await self.session.execute(
-            select(UserProgress).where(
-                UserProgress.id == progress_id
-            )
-        )
+            select(UserProgress).where(UserProgress.id == progress_id))
         return result.scalar_one_or_none()
 
     async def get_by_user(self,user_id: uuid.UUID):
         result = await self.session.execute(
-            select(UserProgress).where(
-                UserProgress.user_id == user_id
-            )
-        )
+            select(UserProgress).where(UserProgress.user_id == user_id))
         return result.scalars().all()
 
     async def get_by_lesson(self,lesson_id: int):
         result = await self.session.execute(
             select(UserProgress).where(
-                UserProgress.lesson_id == lesson_id
-            )
-        )
+                UserProgress.lesson_id == lesson_id))
         return result.scalars().all()
 
     async def get_by_user_and_lesson(self,user_id: uuid.UUID,lesson_id: int):
         result = await self.session.execute(
             select(UserProgress).where(
                 UserProgress.user_id == user_id,
-                UserProgress.lesson_id == lesson_id
-            )
-        )
+                UserProgress.lesson_id == lesson_id))
         return result.scalar_one_or_none()
 
     async def create(self,user_id: uuid.UUID,lesson_id: int,completed: bool = False,score: int = 0):
@@ -55,8 +41,7 @@ class ProgressRepository:
             user_id=user_id,
             lesson_id=lesson_id,
             completed=completed,
-            score=score
-        )
+            score=score)
 
         self.session.add(progress)
         await self.session.commit()

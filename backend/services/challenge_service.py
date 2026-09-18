@@ -19,9 +19,7 @@ class ChallengeService:
         return await self.repository.get_by_date(date.today())
 
     async def create(self,data: ChallengeCreate):
-        existing = await self.repository.get_by_date(
-            data.challenge_date
-        )
+        existing = await self.repository.get_by_date(data.challenge_date)
 
         if existing:
             return None
@@ -30,16 +28,11 @@ class ChallengeService:
             title=data.title,
             description=data.description,
             xp_reward=data.xp_reward,
-            challenge_date=data.challenge_date
-        )
+            challenge_date=data.challenge_date)
 
         return await self.repository.create(challenge)
 
-    async def update(
-        self,
-        challenge_id: int,
-        data: ChallengeUpdate
-    ):
+    async def update(self,challenge_id: int,data: ChallengeUpdate):
         challenge = await self.repository.get_by_id(challenge_id)
 
         if not challenge:

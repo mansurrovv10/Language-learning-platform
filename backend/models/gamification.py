@@ -1,10 +1,8 @@
 import uuid
 from datetime import datetime, date
-
 from sqlalchemy import String, ForeignKey, Integer, DateTime, Date, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
-
 from backend.database.base import Base
 
 
@@ -20,10 +18,7 @@ class XPHistory(Base):
 
 class Streak(Base):
     __tablename__ = "streak"
-
-    __table_args__ = (
-        UniqueConstraint("user_id",name="uq_streak_user"),
-    )
+    __table_args__ = (UniqueConstraint("user_id",name="uq_streak_user"),)
 
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))

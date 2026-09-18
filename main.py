@@ -17,26 +17,24 @@ from backend.api.progress import router as progress_router
 from backend.api.achievement import router as achievement_router
 from backend.api.challange import router as challange_router
 from backend.api.leaderboard import router as leaderboard_router
-from backend.api.notifications import router as notifications_router
 
 setup_logging()
 
 duolingo = FastAPI(title="Mini Duolingo")
+
+duolingo.add_middleware(RateLimitMiddleware)
+duolingo.add_middleware(LoggingMiddleware)
 
 duolingo.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
-)
+    allow_headers=["*"])
 
-duolingo.add_middleware(RateLimitMiddleware)
-duolingo.add_middleware(LoggingMiddleware)
 
 duolingo.include_router(chats_router)
 duolingo.include_router(websocket_router)
-
 duolingo.include_router(auth_router)
 duolingo.include_router(user_router)
 duolingo.include_router(friend_router)
@@ -49,7 +47,7 @@ duolingo.include_router(progress_router)
 duolingo.include_router(achievement_router)
 duolingo.include_router(challange_router)
 duolingo.include_router(leaderboard_router)
-duolingo.include_router(notifications_router)
+
 
 @duolingo.get("/health")
 async def health():

@@ -11,8 +11,7 @@ from backend.models.social import FriendRequest, Friendship
 from backend.models.achievement import Achievement, UserAchievement
 from backend.models.challenge import DailyChallenge
 from backend.models.leaderboard import Leaderboard
-from backend.models.notification import Notification
-from backend.models.reaction import MessageReaction
+
 
 __all__ = [
     "UserProfile",
@@ -32,6 +31,4 @@ __all__ = [
     "UserAchievement",
     "DailyChallenge",
     "Leaderboard",
-    "Notification",
-    "MessageReaction",
 ]

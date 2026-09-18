@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from backend.database.db import get_session
 from backend.repositories.course_repo import CourseRepository
 from backend.schemas.course_schema import CourseCreate, CourseUpdate, CourseResponse
@@ -18,17 +17,12 @@ def get_course_service(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("", response_model=list[CourseResponse])
-async def get_courses(
-    service: CourseService = Depends(get_course_service)
-):
+async def get_courses(service: CourseService = Depends(get_course_service)):
     return await service.get_all()
 
 
 @router.get("/{course_id}", response_model=CourseResponse)
-async def get_course(
-    course_id: int,
-    service: CourseService = Depends(get_course_service)
-):
+async def get_course(course_id: int,service: CourseService = Depends(get_course_service)):
     course = await service.get_by_id(course_id)
 
     if not course:
@@ -38,29 +32,20 @@ async def get_course(
 
 
 @router.get("/language/{language_id}", response_model=list[CourseResponse])
-async def get_courses_by_language(
-    language_id: int,
-    service: CourseService = Depends(get_course_service)
-):
+async def get_courses_by_language(language_id: int,service: CourseService = Depends(get_course_service)):
     return await service.get_by_language(language_id)
 
 
 @router.post("", response_model=CourseResponse)
-async def create_course(
-    data: CourseCreate,
-    service: CourseService = Depends(get_course_service),
-    current_user: UserProfile = Depends(require_admin)
-):
+async def create_course(data: CourseCreate,service: CourseService = Depends(get_course_service),
+    current_user: UserProfile = Depends(require_admin)):
     return await service.create(data)
 
 
 @router.put("/{course_id}", response_model=CourseResponse)
-async def update_course(
-    course_id: int,
-    data: CourseUpdate,
+async def update_course(course_id: int,data: CourseUpdate,
     service: CourseService = Depends(get_course_service),
-    current_user: UserProfile = Depends(require_admin)
-):
+    current_user: UserProfile = Depends(require_admin)):
     course = await service.update(course_id, data)
 
     if not course:
@@ -70,11 +55,8 @@ async def update_course(
 
 
 @router.delete("/{course_id}")
-async def delete_course(
-    course_id: int,
-    service: CourseService = Depends(get_course_service),
-    current_user: UserProfile = Depends(require_admin)
-):
+async def delete_course(course_id: int,service: CourseService = Depends(get_course_service),
+    current_user: UserProfile = Depends(require_admin)):
     result = await service.delete(course_id)
 
     if not result:

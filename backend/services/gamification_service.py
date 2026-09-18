@@ -1,6 +1,5 @@
 import uuid
 from datetime import date,timedelta
-
 from backend.repositories.gamification_repo import GamificationRepository
 
 
@@ -12,11 +11,7 @@ class GamificationService:
         return await self.repository.get_xp_history(user_id)
 
     async def add_xp(self,user_id: uuid.UUID,xp: int,reason: str):
-        return await self.repository.add_xp(
-            user_id,
-            xp,
-            reason
-        )
+        return await self.repository.add_xp(user_id,xp,reason)
 
     async def get_streak(self,user_id: uuid.UUID):
         return await self.repository.get_streak(user_id)

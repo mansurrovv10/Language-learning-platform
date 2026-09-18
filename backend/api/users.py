@@ -23,12 +23,14 @@ async def user_me(current_user:UserProfile=Depends(get_current_user)):
 async def user_list(db:AsyncSession=Depends(get_db),current_user:UserProfile=Depends(require_admin)):
     return await UserService(db).get_users()
 
+@user_router.get("/search",response_model=list[PublicUserSchema])
+async def search_users(q: str,db: AsyncSession = Depends(get_db),
+         current_user: UserProfile = Depends(get_current_user)):
+    return await UserService(db).search_users(q)
+
 @user_router.get("/{user_id}/public",response_model=PublicUserSchema)
-async def user_public(
-    user_id:uuid.UUID,
-    db:AsyncSession=Depends(get_db),
-    current_user:UserProfile=Depends(get_current_user)
-):
+async def user_public(user_id:uuid.UUID,db:AsyncSession=Depends(get_db),
+                      current_user:UserProfile=Depends(get_current_user)):
     user=await UserService(db).get_user(user_id)
 
     if not user:
@@ -37,11 +39,8 @@ async def user_public(
     return user
 
 @user_router.get("/{user_id}",response_model=UserResponseSchema)
-async def user_detail(
-    user_id:uuid.UUID,
-    db:AsyncSession=Depends(get_db),
-    current_user:UserProfile=Depends(get_current_user)
-):
+async def user_detail(user_id:uuid.UUID,db:AsyncSession=Depends(get_db),
+                      current_user:UserProfile=Depends(get_current_user)):
     if current_user.id != user_id and current_user.role.value != "admin":
         raise HTTPException(status_code=403,detail="Access denied")
 
@@ -63,12 +62,8 @@ async def delete_profile(current_user:UserProfile=Depends(get_current_user),db:A
 
 
 @user_router.patch("/{user_id}/role",response_model=UserResponseSchema)
-async def change_role(
-    user_id:uuid.UUID,
-    data:RoleUpdateSchema,
-    db:AsyncSession=Depends(get_db),
-    current_user:UserProfile=Depends(require_admin)
-):
+async def change_role(user_id:uuid.UUID,data:RoleUpdateSchema,db:AsyncSession=Depends(get_db),
+    current_user:UserProfile=Depends(require_admin)):
     if current_user.id == user_id:
         raise HTTPException(status_code=400,detail="You cannot change your own role")
 
@@ -81,12 +76,8 @@ async def change_role(
 
 
 @user_router.patch("/{user_id}/active",response_model=UserResponseSchema)
-async def set_active(
-    user_id:uuid.UUID,
-    data:ActiveUpdateSchema,
-    db:AsyncSession=Depends(get_db),
-    current_user:UserProfile=Depends(require_admin)
-):
+async def set_active(user_id:uuid.UUID,data:ActiveUpdateSchema,
+    db:AsyncSession=Depends(get_db),current_user:UserProfile=Depends(require_admin)):
     if current_user.id == user_id and not data.is_active:
         raise HTTPException(status_code=400,detail="You cannot deactivate yourself")
 

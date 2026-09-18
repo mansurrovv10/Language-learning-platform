@@ -9,7 +9,8 @@ class LanguageRepository:
         self.session = session
 
     async def get_all(self):
-        result = await self.session.execute(select(Language))
+        result = await self.session.execute(
+            select(Language).where(Language.is_active == True))
         return result.scalars().all()
 
     async def get_by_id(self, language_id: int):
@@ -54,6 +55,6 @@ class LanguageRepository:
         if not language:
             return False
 
-        await self.session.delete(language)
+        language.is_active = False
         await self.session.commit()
         return True

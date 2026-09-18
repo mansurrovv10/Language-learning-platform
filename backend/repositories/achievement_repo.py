@@ -11,17 +11,11 @@ class AchievementRepository:
         self.session = session
 
     async def get_all(self):
-        result = await self.session.execute(
-            select(Achievement)
-        )
+        result = await self.session.execute(select(Achievement))
         return result.scalars().all()
 
     async def get_by_id(self,achievement_id: int):
-        result = await self.session.execute(
-            select(Achievement).where(
-                Achievement.id == achievement_id
-            )
-        )
+        result = await self.session.execute(select(Achievement).where(Achievement.id == achievement_id))
         return result.scalar_one_or_none()
 
     async def create(self,achievement: Achievement):
@@ -41,34 +35,18 @@ class AchievementRepository:
 
     async def get_user_achievements(self,user_id: uuid.UUID):
         result = await self.session.execute(
-            select(UserAchievement).where(
-                UserAchievement.user_id == user_id
-            )
-        )
+            select(UserAchievement).where(UserAchievement.user_id == user_id))
         return result.scalars().all()
 
-    async def get_user_achievement(
-        self,
-        user_id: uuid.UUID,
-        achievement_id: int
-    ):
+    async def get_user_achievement(self,user_id: uuid.UUID,achievement_id: int):
         result = await self.session.execute(
             select(UserAchievement).where(
                 UserAchievement.user_id == user_id,
-                UserAchievement.achievement_id == achievement_id
-            )
-        )
+                UserAchievement.achievement_id == achievement_id))
         return result.scalar_one_or_none()
 
-    async def create_user_achievement(
-        self,
-        user_id: uuid.UUID,
-        achievement_id: int
-    ):
-        user_achievement = UserAchievement(
-            user_id=user_id,
-            achievement_id=achievement_id
-        )
+    async def create_user_achievement(self,user_id: uuid.UUID,achievement_id: int):
+        user_achievement = UserAchievement(user_id=user_id,achievement_id=achievement_id)
 
         self.session.add(user_achievement)
         await self.session.commit()

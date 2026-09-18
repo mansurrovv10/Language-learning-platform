@@ -1,7 +1,5 @@
 from uuid import UUID
-
 from fastapi import APIRouter,WebSocket,WebSocketDisconnect
-
 from backend.database.db import SessionLocal
 from backend.repositories.chat_repo import ChatRepository
 from backend.schemas.chat_schema import MessageCreate
@@ -10,10 +8,7 @@ from backend.services.chat_service import ChatService
 from backend.services.redis_service import RedisService
 
 
-websocket_router=APIRouter(
-    prefix="/ws",
-    tags=["WebSocket"]
-)
+websocket_router=APIRouter(prefix="/ws",tags=["WebSocket"])
 
 
 class ConnectionManager:
@@ -21,12 +16,7 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections:dict[UUID,dict[UUID,WebSocket]]={}
 
-    async def connect(
-        self,
-        chat_id:UUID,
-        user_id:UUID,
-        websocket:WebSocket
-    ):
+    async def connect(self,chat_id:UUID,user_id:UUID,websocket:WebSocket):
         await websocket.accept()
 
         if chat_id not in self.active_connections:
@@ -34,48 +24,22 @@ class ConnectionManager:
 
         self.active_connections[chat_id][user_id]=websocket
 
-        await RedisService.set_online(
-            chat_id,
-            user_id
-        )
+        await RedisService.set_online(chat_id,user_id)
 
-    async def disconnect(
-        self,
-        chat_id:UUID,
-        user_id:UUID
-    ):
-        connections=self.active_connections.get(
-            chat_id,
-            {}
-        )
+    async def disconnect(self,chat_id:UUID,user_id:UUID):
+        connections=self.active_connections.get(chat_id,{})
 
         connections.pop(user_id,None)
 
         if not connections:
-            self.active_connections.pop(
-                chat_id,
-                None
-            )
+            self.active_connections.pop(chat_id,None)
 
-        await RedisService.set_offline(
-            chat_id,
-            user_id
-        )
+        await RedisService.set_offline(chat_id,user_id)
 
-        await RedisService.remove_typing(
-            chat_id,
-            user_id
-        )
+        await RedisService.remove_typing(chat_id,user_id)
 
-    async def broadcast(
-        self,
-        chat_id:UUID,
-        data:dict
-    ):
-        connections=self.active_connections.get(
-            chat_id,
-            {}
-        )
+    async def broadcast(self,chat_id:UUID,data:dict):
+        connections=self.active_connections.get(chat_id,{})
 
         disconnected_users=[]
 
@@ -86,37 +50,23 @@ class ConnectionManager:
                 disconnected_users.append(user_id)
 
         for user_id in disconnected_users:
-            await self.disconnect(
-                chat_id,
-                user_id
-            )
+            await self.disconnect(chat_id,user_id)
 
-    async def get_online_users(
-        self,
-        chat_id:UUID
-    ):
+    async def get_online_users(self,chat_id:UUID):
         return await RedisService.get_online_users(chat_id)
-
 
 manager=ConnectionManager()
 
 
 @websocket_router.websocket("/chats/{chat_id}")
-async def chat_websocket(
-    websocket:WebSocket,
-    chat_id:UUID,
-    token:str=""
-):
+async def chat_websocket(websocket:WebSocket,chat_id:UUID,token:str=""):
     auth_header=websocket.headers.get("authorization","")
 
     if auth_header.startswith("Bearer "):
         token=auth_header[7:]
 
     if not token:
-        await websocket.close(
-            code=1008,
-            reason="Authentication required"
-        )
+        await websocket.close(code=1008,reason="Authentication required")
         return
 
     async with SessionLocal() as session:
@@ -125,19 +75,13 @@ async def chat_websocket(
         payload=auth_service.decode_token(token)
 
         if not payload or payload.get("type")!="access":
-            await websocket.close(
-                code=1008,
-                reason="Invalid token"
-            )
+            await websocket.close(code=1008,reason="Invalid token")
             return
 
         try:
             user_id=UUID(str(payload.get("sub")))
         except (ValueError,TypeError):
-            await websocket.close(
-                code=1008,
-                reason="Invalid token payload"
-            )
+            await websocket.close(code=1008,reason="Invalid token payload")
             return
 
         repository=ChatRepository(session)
@@ -146,29 +90,16 @@ async def chat_websocket(
         chat=await service.get_chat(chat_id)
 
         if chat is None:
-            await websocket.close(
-                code=1008,
-                reason="Chat not found"
-            )
+            await websocket.close(code=1008,reason="Chat not found")
             return
 
-        member=await service.get_member(
-            chat_id,
-            user_id
-        )
+        member=await service.get_member(chat_id,user_id)
 
         if member is None:
-            await websocket.close(
-                code=1008,
-                reason="User is not a member of this chat"
-            )
+            await websocket.close(code=1008,reason="User is not a member of this chat")
             return
 
-        await manager.connect(
-            chat_id,
-            user_id,
-            websocket
-        )
+        await manager.connect(chat_id,user_id,websocket)
 
         await websocket.send_json(
             {
@@ -220,15 +151,9 @@ async def chat_websocket(
                         )
                         continue
 
-                    message_data=MessageCreate(
-                        content=content
-                    )
+                    message_data=MessageCreate(content=content)
 
-                    message=await service.create_message(
-                        chat_id=chat_id,
-                        sender_id=user_id,
-                        data=message_data
-                    )
+                    message=await service.create_message(chat_id=chat_id,sender_id=user_id,data=message_data)
 
                     await manager.broadcast(
                         chat_id,
@@ -247,10 +172,7 @@ async def chat_websocket(
 
                 elif event_type=="typing.start":
 
-                    await RedisService.set_typing(
-                        chat_id,
-                        user_id
-                    )
+                    await RedisService.set_typing(chat_id,user_id)
 
                     await manager.broadcast(
                         chat_id,
@@ -265,9 +187,7 @@ async def chat_websocket(
                 elif event_type=="typing.stop":
 
                     await RedisService.remove_typing(
-                        chat_id,
-                        user_id
-                    )
+                        chat_id,user_id)
 
                     await manager.broadcast(
                         chat_id,
@@ -290,10 +210,7 @@ async def chat_websocket(
 
         except WebSocketDisconnect:
 
-            await manager.disconnect(
-                chat_id,
-                user_id
-            )
+            await manager.disconnect(chat_id,user_id)
 
             await manager.broadcast(
                 chat_id,
@@ -307,15 +224,9 @@ async def chat_websocket(
 
         except Exception:
 
-            await manager.disconnect(
-                chat_id,
-                user_id
-            )
+            await manager.disconnect(chat_id,user_id)
 
             try:
-                await websocket.close(
-                    code=1011,
-                    reason="Internal server error"
-                )
+                await websocket.close(code=1011,reason="Internal server error")
             except Exception:
                 pass

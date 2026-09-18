@@ -16,15 +16,13 @@ class ExerciseService:
         repository: ExerciseRepository,
         progress_repository: ProgressRepository,
         gamification_repository: GamificationRepository,
-        achievement_repository: AchievementRepository
-    ):
+        achievement_repository: AchievementRepository):
         self.repository = repository
         self.progress_repository = progress_repository
         self.gamification_repository = gamification_repository
         self.achievement_service = AchievementService(
             achievement_repository,
-            gamification_repository
-        )
+            gamification_repository)
 
     async def get_all(self):
         return await self.repository.get_all()
@@ -63,8 +61,7 @@ class ExerciseService:
         self,
         exercise_id: int,
         data: ExerciseSubmit,
-        user_id: uuid.UUID
-    ):
+        user_id: uuid.UUID):
         exercise = await self.repository.get_by_id(exercise_id)
 
         if not exercise:
@@ -75,8 +72,7 @@ class ExerciseService:
 
         progress = await self.progress_repository.get_by_user_and_lesson(
             user_id,
-            exercise.lesson_id
-        )
+            exercise.lesson_id)
 
         already_completed = progress.completed if progress else False
 
