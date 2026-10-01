@@ -1,11 +1,10 @@
+import asyncio
+import json
 from uuid import UUID
 from fastapi import APIRouter,WebSocket,WebSocketDisconnect
 from backend.database.db import SessionLocal
-from backend.repositories.chat_repo import ChatRepository
-from backend.schemas.chat_schema import MessageCreate
+from backend.models.user import UserProfile
 from backend.services.auth_ser import AuthService
-from backend.services.chat_service import ChatService
-from backend.services.redis_service import RedisService
 
 
 websocket_router=APIRouter(prefix="/ws",tags=["WebSocket"])
@@ -14,219 +13,214 @@ websocket_router=APIRouter(prefix="/ws",tags=["WebSocket"])
 class ConnectionManager:
 
     def __init__(self):
-        self.active_connections:dict[UUID,dict[UUID,WebSocket]]={}
+        self.active_connections:dict[UUID,set[WebSocket]]={}
 
-    async def connect(self,chat_id:UUID,user_id:UUID,websocket:WebSocket):
+    async def connect(self,user_id:UUID,websocket:WebSocket):
         await websocket.accept()
 
-        if chat_id not in self.active_connections:
-            self.active_connections[chat_id]={}
+        if user_id not in self.active_connections:
+            self.active_connections[user_id]=set()
 
-        self.active_connections[chat_id][user_id]=websocket
+        self.active_connections[user_id].add(websocket)
 
-        await RedisService.set_online(chat_id,user_id)
+    async def disconnect(self,user_id:UUID,websocket:WebSocket):
+        connections=self.active_connections.get(user_id,set())
 
-    async def disconnect(self,chat_id:UUID,user_id:UUID):
-        connections=self.active_connections.get(chat_id,{})
-
-        connections.pop(user_id,None)
+        connections.discard(websocket)
 
         if not connections:
-            self.active_connections.pop(chat_id,None)
+            self.active_connections.pop(user_id,None)
 
-        await RedisService.set_offline(chat_id,user_id)
+    async def send_to_user(self,user_id:UUID,data:dict):
+        connections=self.active_connections.get(user_id,set())
 
-        await RedisService.remove_typing(chat_id,user_id)
+        disconnected=[]
 
-    async def broadcast(self,chat_id:UUID,data:dict):
-        connections=self.active_connections.get(chat_id,{})
-
-        disconnected_users=[]
-
-        for user_id,websocket in connections.copy().items():
+        for websocket in connections.copy():
             try:
                 await websocket.send_json(data)
             except Exception:
-                disconnected_users.append(user_id)
+                disconnected.append(websocket)
 
-        for user_id in disconnected_users:
-            await self.disconnect(chat_id,user_id)
+        for websocket in disconnected:
+            await self.disconnect(user_id,websocket)
 
-    async def get_online_users(self,chat_id:UUID):
-        return await RedisService.get_online_users(chat_id)
+    async def send_to_users(self,user_ids:list[UUID],data:dict):
+        for user_id in set(user_ids):
+            await self.send_to_user(user_id,data)
+
 
 manager=ConnectionManager()
 
 
-@websocket_router.websocket("/chats/{chat_id}")
-async def chat_websocket(websocket:WebSocket,chat_id:UUID,token:str=""):
-    auth_header=websocket.headers.get("authorization","")
+@websocket_router.websocket("/chats")
+async def chat_websocket(websocket:WebSocket):
+    user_id=None
 
-    if auth_header.startswith("Bearer "):
-        token=auth_header[7:]
-
-    if not token:
-        await websocket.close(code=1008,reason="Authentication required")
-        return
+    await websocket.accept()
 
     async with SessionLocal() as session:
 
         auth_service=AuthService(session)
-        payload=auth_service.decode_token(token)
-
-        if not payload or payload.get("type")!="access":
-            await websocket.close(code=1008,reason="Invalid token")
-            return
 
         try:
-            user_id=UUID(str(payload.get("sub")))
-        except (ValueError,TypeError):
-            await websocket.close(code=1008,reason="Invalid token payload")
-            return
 
-        repository=ChatRepository(session)
-        service=ChatService(repository)
+            try:
+                data=await asyncio.wait_for(
+                    websocket.receive(),
+                    timeout=5
+                )
+            except asyncio.TimeoutError:
+                await websocket.close(code=4401)
+                return
 
-        chat=await service.get_chat(chat_id)
+            if data.get("type")=="websocket.disconnect":
+                return
 
-        if chat is None:
-            await websocket.close(code=1008,reason="Chat not found")
-            return
+            if data.get("bytes") is not None:
+                await websocket.close(code=4401)
+                return
 
-        member=await service.get_member(chat_id,user_id)
+            text=data.get("text")
 
-        if member is None:
-            await websocket.close(code=1008,reason="User is not a member of this chat")
-            return
+            if not text or len(text)>16384:
+                await websocket.close(code=4401)
+                return
 
-        await manager.connect(chat_id,user_id,websocket)
+            try:
+                auth_data=json.loads(text)
+            except json.JSONDecodeError:
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"UNAUTHORIZED",
+                        "message":"Authentication required"
+                    }
+                )
+                await websocket.close(code=4401)
+                return
 
-        await websocket.send_json(
-            {
-                "type":"connection.established",
-                "data":{
-                    "chat_id":str(chat_id),
-                    "user_id":str(user_id)
+            if not isinstance(auth_data,dict) or auth_data.get("type")!="auth":
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"UNAUTHORIZED",
+                        "message":"Authentication required"
+                    }
+                )
+                await websocket.close(code=4401)
+                return
+
+            token=auth_data.get("access_token")
+
+            if not isinstance(token,str) or not token:
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"UNAUTHORIZED",
+                        "message":"Authentication required"
+                    }
+                )
+                await websocket.close(code=4401)
+                return
+
+            payload=auth_service.decode_token(token)
+
+            if not payload or payload.get("type")!="access":
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"UNAUTHORIZED",
+                        "message":"Authentication required"
+                    }
+                )
+                await websocket.close(code=4401)
+                return
+
+            try:
+                user_id=UUID(str(payload.get("sub")))
+            except (ValueError,TypeError):
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"UNAUTHORIZED",
+                        "message":"Authentication required"
+                    }
+                )
+                await websocket.close(code=4401)
+                return
+
+            user=await session.get(UserProfile,user_id)
+
+            if not user:
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"UNAUTHORIZED",
+                        "message":"Authentication required"
+                    }
+                )
+                await websocket.close(code=4401)
+                return
+
+            if not user.is_active:
+                await websocket.send_json(
+                    {
+                        "type":"error",
+                        "code":"FORBIDDEN",
+                        "message":"User is inactive"
+                    }
+                )
+                await websocket.close(code=4403)
+                return
+
+            await manager.connect(user_id,websocket)
+
+            await websocket.send_json(
+                {
+                    "type":"auth.ok"
                 }
-            }
-        )
+            )
 
-        await manager.broadcast(
-            chat_id,
-            {
-                "type":"user.online",
-                "data":{
-                    "user_id":str(user_id)
-                }
-            }
-        )
-
-        try:
             while True:
 
-                data=await websocket.receive_json()
-                event_type=data.get("type")
+                data=await websocket.receive()
 
-                if event_type=="message":
+                if data.get("type")=="websocket.disconnect":
+                    break
 
-                    content=data.get("content")
+                if data.get("bytes") is not None:
+                    continue
 
-                    if not content:
-                        await websocket.send_json(
-                            {
-                                "type":"error",
-                                "message":"Message content is required"
-                            }
-                        )
-                        continue
+                text=data.get("text")
 
-                    content=content.strip()
+                if not text or len(text)>16384:
+                    continue
 
-                    if not content:
-                        await websocket.send_json(
-                            {
-                                "type":"error",
-                                "message":"Message content cannot be empty"
-                            }
-                        )
-                        continue
+                try:
+                    event=json.loads(text)
+                except json.JSONDecodeError:
+                    continue
 
-                    message_data=MessageCreate(content=content)
+                if not isinstance(event,dict):
+                    continue
 
-                    message=await service.create_message(chat_id=chat_id,sender_id=user_id,data=message_data)
-
-                    await manager.broadcast(
-                        chat_id,
-                        {
-                            "type":"message.created",
-                            "data":{
-                                "id":str(message.id),
-                                "chat_id":str(message.chat_id),
-                                "sender_id":str(message.sender_id),
-                                "content":message.content,
-                                "created_at":message.created_at.isoformat(),
-                                "is_read":message.is_read
-                            }
-                        }
-                    )
-
-                elif event_type=="typing.start":
-
-                    await RedisService.set_typing(chat_id,user_id)
-
-                    await manager.broadcast(
-                        chat_id,
-                        {
-                            "type":"typing.start",
-                            "data":{
-                                "user_id":str(user_id)
-                            }
-                        }
-                    )
-
-                elif event_type=="typing.stop":
-
-                    await RedisService.remove_typing(
-                        chat_id,user_id)
-
-                    await manager.broadcast(
-                        chat_id,
-                        {
-                            "type":"typing.stop",
-                            "data":{
-                                "user_id":str(user_id)
-                            }
-                        }
-                    )
-
-                else:
-
+                if event.get("type")=="ping":
                     await websocket.send_json(
                         {
-                            "type":"error",
-                            "message":"Unknown event type"
+                            "type":"pong"
                         }
                     )
 
         except WebSocketDisconnect:
-
-            await manager.disconnect(chat_id,user_id)
-
-            await manager.broadcast(
-                chat_id,
-                {
-                    "type":"user.offline",
-                    "data":{
-                        "user_id":str(user_id)
-                    }
-                }
-            )
+            pass
 
         except Exception:
-
-            await manager.disconnect(chat_id,user_id)
-
             try:
-                await websocket.close(code=1011,reason="Internal server error")
+                await websocket.close(code=1011)
             except Exception:
                 pass
+
+        finally:
+            if user_id is not None:
+                await manager.disconnect(user_id,websocket)

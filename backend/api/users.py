@@ -8,6 +8,8 @@ from backend.schemas.user_schema import UserUpdateSchema, RoleUpdateSchema, Acti
 from backend.schemas.public_schema import PublicUserSchema
 from backend.api.auth import get_current_user,require_admin
 from backend.services.user_ser import UserService
+import os
+from fastapi import APIRouter,Depends,HTTPException,UploadFile,File
 
 user_router=APIRouter(prefix="/users",tags=["Users"])
 
@@ -87,3 +89,28 @@ async def set_active(user_id:uuid.UUID,data:ActiveUpdateSchema,
         raise HTTPException(status_code=404,detail="User not found")
 
     return user
+
+
+@user_router.patch("/me/avatar",response_model=UserResponseSchema)
+async def upload_avatar(file: UploadFile=File(...),
+                        current_user:UserProfile=Depends(get_current_user),
+                        db:AsyncSession=Depends(get_db)):
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400,detail="File must be an image")
+
+    os.makedirs("uploads/avatars",exist_ok=True)
+
+    file_extension=os.path.splitext(file.filename)[1]
+    file_name=f"{current_user.id}{file_extension}"
+    file_path=f"uploads/avatars/{file_name}"
+
+    with open(file_path,"wb") as buffer:
+        buffer.write(await file.read())
+
+    current_user.avatar=file_path
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return current_user

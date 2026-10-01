@@ -4,7 +4,7 @@ from backend.models.course import Course
 from backend.models.lesson import Lesson
 from backend.models.exercise import Exercise
 from backend.models.progress import UserProgress
-from backend.models.gamification import XPHistory, Streak
+from backend.models.gamification import XPHistory, Streak, Hearts
 from backend.models.chat import Chat, ChatMember
 from backend.models.message import Message
 from backend.models.social import FriendRequest, Friendship
@@ -25,6 +25,7 @@ __all__ = [
     "UserProgress",
     "XPHistory",
     "Streak",
+    "Hearts",
     "Chat",
     "ChatMember",
     "Message",

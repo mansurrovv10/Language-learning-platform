@@ -34,6 +34,7 @@ class UserResponseSchema(BaseModel):
     role: UserRole
     is_active: bool
     created_at: datetime
+    avatar: str | None = None
 
 
 class RefreshTokenResponseSchema(BaseModel):

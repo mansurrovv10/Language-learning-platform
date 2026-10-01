@@ -8,7 +8,7 @@ from backend.repositories.gamification_repo import GamificationRepository
 from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
 from backend.schemas.exercise_schema import (ExerciseCreate,ExerciseUpdate,ExerciseResponse,
                                              ExerciseSubmit,ExerciseResult)
-from backend.services.exercise_service import ExerciseService
+from backend.services.exercise_service import ExerciseService,NotEnoughHeartsError
 from backend.api.auth import get_current_user,require_admin
 from backend.models.user import UserProfile
 from backend.repositories.learning_path_repo import LearningPathRepository
@@ -103,15 +103,27 @@ async def submit_exercise(
     access_service: LearningPathService = Depends(get_learning_path_service)
 ):
     exercise = await service.get_by_id(exercise_id)
+
     if not exercise:
         raise HTTPException(status_code=404,detail="Exercise not found")
+
     if current_user.role.value != "admin":
         await access_service.ensure_lesson_access(current_user.id,exercise.lesson_id)
-    result = await service.submit_exercise(
-        exercise_id,
-        data,
-        current_user.id
-    )
+
+    try:
+        result = await service.submit_exercise(
+            exercise_id,
+            data,
+            current_user.id
+        )
+    except NotEnoughHeartsError as e:
+        raise HTTPException(status_code=409,detail={
+            "code":"NO_HEARTS",
+            "message":"Not enough hearts",
+            "seconds_to_next_heart":e.seconds_to_next_heart
+        })
+    except ValueError as e:
+        raise HTTPException(status_code=400,detail=str(e))
 
     if result is None:
         raise HTTPException(status_code=404,detail="Exercise not found")

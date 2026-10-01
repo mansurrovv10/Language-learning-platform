@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.course import Course
+from backend.models.course import Course, LevelChoices
 from backend.models.lesson import Lesson
 from backend.models.user_language import UserLanguage
 
@@ -17,6 +17,23 @@ class LearningPathRepository:
             UserLanguage.user_id == user_id,
             UserLanguage.language_id == language_id))
         return result.scalar_one_or_none()
+
+    async def get_or_create_user_language(self,user_id: uuid.UUID,language_id: int):
+        user_language = await self.get_user_language(user_id,language_id)
+
+        if user_language:
+            return user_language
+
+        user_language = UserLanguage(
+            user_id=user_id,
+            language_id=language_id,
+            level=LevelChoices.A1,
+            placement_completed=False)
+
+        self.session.add(user_language)
+        await self.session.commit()
+        await self.session.refresh(user_language)
+        return user_language
 
     async def get_courses(self,language_id: int):
         result = await self.session.execute(select(Course)

@@ -2,6 +2,10 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import UserProfile
 from backend.models.social import FriendRequest, Friendship
+from backend.models.progress import UserProgress
+from backend.models.exercise_progress import UserExerciseProgress
+from backend.models.gamification import Hearts
+
 
 class UserRepository:
     def __init__(self,db:AsyncSession):
@@ -41,10 +45,24 @@ class UserRepository:
             delete(FriendRequest).where(
                 (FriendRequest.sender_id==user.id) |
                 (FriendRequest.receiver_id==user.id)))
+
         await self.db.execute(
             delete(Friendship).where(
                 (Friendship.user_id==user.id) |
                 (Friendship.friend_id==user.id)))
+
+        await self.db.execute(
+            delete(UserProgress).where(
+                UserProgress.user_id==user.id))
+
+        await self.db.execute(
+            delete(UserExerciseProgress).where(
+                UserExerciseProgress.user_id==user.id))
+
+        await self.db.execute(
+            delete(Hearts).where(
+                Hearts.user_id==user.id))
+
         await self.db.delete(user)
         await self.db.commit()
 

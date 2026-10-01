@@ -14,14 +14,18 @@ class LearningPathService:
     def __init__(self,repository: LearningPathRepository):
         self.repository = repository
 
+    async def start_language(self,user_id: uuid.UUID,language_id: int):
+        return await self.repository.get_or_create_user_language(user_id,language_id)
+
     async def get_path(self,user_id: uuid.UUID,language_id: int):
         user_language = await self.repository.get_user_language(user_id,language_id)
         level = user_language.level if user_language else None
         placement_completed = user_language.placement_completed if user_language else False
         courses = await self.repository.get_courses(language_id)
         result = []
+
         for course in courses:
-            is_unlocked = placement_completed and self._is_unlocked(course.level,level)
+            is_unlocked = level is not None and self._is_unlocked(course.level,level)
             result.append({
                 "id":course.id,
                 "language_id":course.language_id,
@@ -32,6 +36,7 @@ class LearningPathService:
                 "is_unlocked":is_unlocked,
                 "lessons":await self.repository.get_lessons(course.id) if is_unlocked else []
             })
+
         return {"language_id":language_id,"level":level,
             "placement_completed":placement_completed,"courses":result}
 
@@ -44,11 +49,15 @@ class LearningPathService:
         course = await self.repository.get_course(course_id)
         if not course:
             raise HTTPException(status_code=404,detail="Course not found")
+
         user_language = await self.repository.get_user_language(user_id,course.language_id)
-        if not user_language or not user_language.placement_completed:
-            raise HTTPException(status_code=403,detail="Complete placement test first")
+
+        if not user_language or user_language.level is None:
+            raise HTTPException(status_code=403,detail="Start learning this language first")
+
         if not self._is_unlocked(course.level,user_language.level):
             raise HTTPException(status_code=403,detail="Course is locked for your current level")
+
         return course
 
     async def ensure_lesson_access(self,user_id: uuid.UUID,lesson_id: int):

@@ -21,3 +21,9 @@ class StreakResponse(BaseModel):
     last_activity: date | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class HeartsResponse(BaseModel):
+    hearts: int
+    max_hearts: int
+    seconds_to_next_heart: int

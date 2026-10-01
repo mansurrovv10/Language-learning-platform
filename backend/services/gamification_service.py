@@ -16,6 +16,9 @@ class GamificationService:
     async def get_streak(self,user_id: uuid.UUID):
         return await self.repository.get_streak(user_id)
 
+    async def get_hearts_status(self,user_id: uuid.UUID):
+        return await self.repository.get_hearts_status(user_id)
+
     async def update_streak(self,user_id: uuid.UUID):
         streak = await self.repository.get_streak(user_id)
 

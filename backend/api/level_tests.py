@@ -1,8 +1,6 @@
 import uuid
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from backend.api.auth import get_current_user, require_admin
 from backend.database.db import get_session
 from backend.models.course import LevelChoices

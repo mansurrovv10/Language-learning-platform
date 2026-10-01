@@ -38,3 +38,4 @@ class ExerciseSubmit(BaseModel):
 class ExerciseResult(BaseModel):
     correct: bool
     score: int
+    hearts_left: int

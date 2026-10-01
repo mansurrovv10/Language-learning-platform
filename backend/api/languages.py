@@ -4,8 +4,8 @@ from backend.database.db import get_session
 from backend.repositories.language_repo import LanguageRepository
 from backend.schemas.language_schema import LanguageCreate, LanguageUpdate, LanguageResponse
 from backend.services.language_service import LanguageService
-from backend.api.auth import require_admin
-from backend.models.user import UserProfile
+from backend.api.auth import require_admin, get_current_user
+from backend.models.user import UserProfile, UserRole
 
 
 router = APIRouter(prefix="/languages", tags=["Languages"])
@@ -17,8 +17,12 @@ def get_language_service(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("", response_model=list[LanguageResponse])
-async def get_languages(service: LanguageService = Depends(get_language_service)):
-    return await service.get_all()
+async def get_languages(
+    service: LanguageService = Depends(get_language_service),
+    current_user: UserProfile = Depends(get_current_user)
+):
+    is_admin = current_user.role == UserRole.ADMIN
+    return await service.get_all(is_admin)
 
 
 @router.get("/{language_id}", response_model=LanguageResponse)

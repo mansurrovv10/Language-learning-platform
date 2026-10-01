@@ -24,3 +24,13 @@ class Streak(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     current_streak: Mapped[int] = mapped_column(Integer,default=0)
     last_activity: Mapped[date | None] = mapped_column(Date,nullable=True)
+
+
+class Hearts(Base):
+    __tablename__ = "hearts"
+    __table_args__ = (UniqueConstraint("user_id",name="uq_hearts_user"),)
+
+    id: Mapped[int] = mapped_column(Integer,primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
+    hearts: Mapped[int] = mapped_column(Integer,default=5)
+    last_heart_lost_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)

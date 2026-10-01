@@ -16,6 +16,14 @@ def get_learning_path_service(session: AsyncSession = Depends(get_session)):
     return LearningPathService(LearningPathRepository(session))
 
 
+@router.post("/{language_id}/start",response_model=LearningPathResponse)
+async def start_learning(language_id: int,
+    service: LearningPathService = Depends(get_learning_path_service),
+    current_user: UserProfile = Depends(get_current_user)):
+    await service.start_language(current_user.id,language_id)
+    return await service.get_path(current_user.id,language_id)
+
+
 @router.get("/{language_id}",response_model=LearningPathResponse)
 async def get_learning_path(language_id: int,
     service: LearningPathService = Depends(get_learning_path_service),

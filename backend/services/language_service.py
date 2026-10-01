@@ -5,8 +5,8 @@ class LanguageService:
     def __init__(self, repository: LanguageRepository):
         self.repository = repository
 
-    async def get_all(self):
-        return await self.repository.get_all()
+    async def get_all(self, is_admin: bool = False):
+        return await self.repository.get_all(is_admin)
 
     async def get_by_id(self, language_id: int):
         return await self.repository.get_by_id(language_id)

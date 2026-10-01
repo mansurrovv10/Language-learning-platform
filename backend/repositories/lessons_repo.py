@@ -1,6 +1,10 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.models.lesson import Lesson
+from backend.models.exercise import Exercise
+from backend.models.progress import UserProgress
+from backend.models.exercise_progress import UserExerciseProgress
 
 
 class LessonRepository:
@@ -62,6 +66,33 @@ class LessonRepository:
         if not lesson:
             return False
 
+        await self.session.execute(
+            delete(UserProgress).where(
+                UserProgress.lesson_id == lesson_id
+            )
+        )
+
+        result = await self.session.execute(
+            select(Exercise.id).where(
+                Exercise.lesson_id == lesson_id
+            )
+        )
+        exercise_ids = result.scalars().all()
+
+        if exercise_ids:
+            await self.session.execute(
+                delete(UserExerciseProgress).where(
+                    UserExerciseProgress.exercise_id.in_(exercise_ids)
+                )
+            )
+
+            await self.session.execute(
+                delete(Exercise).where(
+                    Exercise.id.in_(exercise_ids)
+                )
+            )
+
         await self.session.delete(lesson)
         await self.session.commit()
+
         return True

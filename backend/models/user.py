@@ -23,6 +23,7 @@ class UserProfile(Base):
     role: Mapped[UserRole] = mapped_column(Enum(UserRole),default=UserRole.USER)
     is_active: Mapped[bool] = mapped_column(Boolean,default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    avatar: Mapped[str | None] = mapped_column(String, nullable=True)
 
     refresh_user: Mapped[List['RefreshToken']] = relationship(back_populates='users',
                                                               cascade='all, delete-orphan')

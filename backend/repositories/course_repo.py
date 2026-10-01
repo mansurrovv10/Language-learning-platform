@@ -5,6 +5,7 @@ from backend.models.course import Course
 from backend.models.lesson import Lesson
 from backend.models.exercise import Exercise
 from backend.models.progress import UserProgress
+from backend.models.exercise_progress import UserExerciseProgress
 
 
 class CourseRepository:
@@ -36,13 +37,43 @@ class CourseRepository:
         return course
 
     async def delete(self, course: Course):
-        result = await self.session.execute(select(Lesson.id).where(Lesson.course_id == course.id))
+        result = await self.session.execute(
+            select(Lesson.id).where(Lesson.course_id == course.id)
+        )
         lesson_ids = result.scalars().all()
 
         if lesson_ids:
-            await self.session.execute(delete(UserProgress).where(UserProgress.lesson_id.in_(lesson_ids)))
-            await self.session.execute(delete(Exercise).where(Exercise.lesson_id.in_(lesson_ids)))
-            await self.session.execute(delete(Lesson).where(Lesson.id.in_(lesson_ids)))
+            await self.session.execute(
+                delete(UserProgress).where(
+                    UserProgress.lesson_id.in_(lesson_ids)
+                )
+            )
+
+            result = await self.session.execute(
+                select(Exercise.id).where(
+                    Exercise.lesson_id.in_(lesson_ids)
+                )
+            )
+            exercise_ids = result.scalars().all()
+
+            if exercise_ids:
+                await self.session.execute(
+                    delete(UserExerciseProgress).where(
+                        UserExerciseProgress.exercise_id.in_(exercise_ids)
+                    )
+                )
+
+                await self.session.execute(
+                    delete(Exercise).where(
+                        Exercise.id.in_(exercise_ids)
+                    )
+                )
+
+            await self.session.execute(
+                delete(Lesson).where(
+                    Lesson.id.in_(lesson_ids)
+                )
+            )
 
         await self.session.delete(course)
         await self.session.commit()

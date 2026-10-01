@@ -1,6 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.models.exercise import Exercise
+from backend.models.exercise_progress import UserExerciseProgress
 
 
 class ExerciseRepository:
@@ -33,5 +35,11 @@ class ExerciseRepository:
         return exercise
 
     async def delete(self, exercise: Exercise):
+        await self.session.execute(
+            delete(UserExerciseProgress).where(
+                UserExerciseProgress.exercise_id == exercise.id
+            )
+        )
+
         await self.session.delete(exercise)
         await self.session.commit()

@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+from contextlib import asynccontextmanager,suppress
 import uvicorn
 from backend.logging_conf import setup_logging
 from backend.config import settings
@@ -20,10 +22,29 @@ from backend.api.challange import router as challange_router
 from backend.api.leaderboard import router as leaderboard_router
 from backend.api.level_tests import router as level_tests_router
 from backend.api.learning_path import router as learning_path_router
+from backend.services.heart_refill import run_heart_refill_loop
+from fastapi.staticfiles import StaticFiles
+
 
 setup_logging()
 
-duolingo = FastAPI(title="Mini Duolingo")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(run_heart_refill_loop())
+
+    try:
+        yield
+    finally:
+        task.cancel()
+
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+duolingo = FastAPI(title="Mini Duolingo",lifespan=lifespan)
+
+duolingo.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 duolingo.add_middleware(RateLimitMiddleware)
 duolingo.add_middleware(LoggingMiddleware)
@@ -31,9 +52,11 @@ duolingo.add_middleware(LoggingMiddleware)
 duolingo.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
+    allow_origin_regex=r"https://[\w-]+\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"])
+    allow_headers=["*"],
+    expose_headers=["Content-Type"])
 
 
 duolingo.include_router(chats_router)
@@ -59,4 +82,4 @@ async def health():
     return {"status": "ok"}
 
 if __name__ == '__main__':
-    uvicorn.run(duolingo, host="127.0.0.1", port=8001)
+    uvicorn.run(duolingo, host=settings.HOST, port=settings.PORT)
