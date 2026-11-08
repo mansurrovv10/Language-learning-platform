@@ -13,7 +13,7 @@ class XPHistory(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     xp: Mapped[int] = mapped_column(Integer)
     reason: Mapped[str] = mapped_column(String)
-    created_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
 
 
 class Streak(Base):
@@ -33,4 +33,4 @@ class Hearts(Base):
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     hearts: Mapped[int] = mapped_column(Integer,default=5)
-    last_heart_lost_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)
+    last_heart_lost_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),nullable=True)

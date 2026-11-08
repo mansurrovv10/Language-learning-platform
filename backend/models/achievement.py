@@ -24,4 +24,4 @@ class UserAchievement(Base):
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     achievement_id: Mapped[int] = mapped_column(Integer,ForeignKey("achievement.id"))
-    earned_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)

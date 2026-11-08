@@ -13,6 +13,6 @@ class Leaderboard(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     xp: Mapped[int] = mapped_column(Integer,default=0)
     rank: Mapped[int] = mapped_column(Integer)
-    updated_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     user: Mapped["UserProfile"] = relationship(lazy="joined")

@@ -14,6 +14,7 @@ from backend.models.leaderboard import Leaderboard
 from backend.models.level_test import LevelTest, LevelTestQuestion, LevelTestAttempt
 from backend.models.user_language import UserLanguage
 from backend.models.exercise_progress import UserExerciseProgress
+from backend.models.exercise_submission import ExerciseSubmission
 
 
 __all__ = [
@@ -40,4 +41,5 @@ __all__ = [
     "LevelTestAttempt",
     "UserLanguage",
     "UserExerciseProgress",
+    "ExerciseSubmission",
 ]

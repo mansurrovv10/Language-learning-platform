@@ -22,7 +22,7 @@ class UserProfile(Base):
     password_hash: Mapped[str] = mapped_column(String)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole),default=UserRole.USER)
     is_active: Mapped[bool] = mapped_column(Boolean,default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     avatar: Mapped[str | None] = mapped_column(String, nullable=True)
 
     refresh_user: Mapped[List['RefreshToken']] = relationship(back_populates='users',
@@ -35,4 +35,4 @@ class RefreshToken(Base):
     users_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey('user.id'))
     users: Mapped[UserProfile] = relationship(back_populates='refresh_user')
     token: Mapped[str] = mapped_column(String, nullable=False)
-    created_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)

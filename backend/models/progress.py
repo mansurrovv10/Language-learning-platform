@@ -19,4 +19,4 @@ class UserProgress(Base):
     lesson_id: Mapped[int] = mapped_column(Integer,ForeignKey("lesson.id"))
     completed: Mapped[bool] = mapped_column(Boolean,default=False)
     score: Mapped[int] = mapped_column(Integer,default=0)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),nullable=True)

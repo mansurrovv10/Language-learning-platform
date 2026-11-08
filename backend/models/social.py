@@ -17,12 +17,12 @@ class FriendRequest(Base):
     sender_id:Mapped[uuid.UUID]=mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     receiver_id:Mapped[uuid.UUID]=mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     status:Mapped[FriendRequestStatus]=mapped_column(Enum(FriendRequestStatus),default=FriendRequestStatus.PENDING)
-    created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
+    created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=datetime.utcnow)
 
 class Friendship(Base):
     __tablename__="friendship"
     id:Mapped[int]=mapped_column(Integer,primary_key=True,autoincrement=True)
     user_id:Mapped[uuid.UUID]=mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     friend_id:Mapped[uuid.UUID]=mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
-    created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
+    created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=datetime.utcnow)
 

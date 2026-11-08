@@ -17,7 +17,7 @@ class LevelTest(Base):
     target_level: Mapped[LevelChoices|None] = mapped_column(Enum(LevelChoices),nullable=True)
     passing_score: Mapped[int] = mapped_column(Integer,default=70)
     is_active: Mapped[bool] = mapped_column(Boolean,default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
 
 
 class LevelTestQuestion(Base):
@@ -43,5 +43,5 @@ class LevelTestAttempt(Base):
     score: Mapped[float|None] = mapped_column(Float,nullable=True)
     result_level: Mapped[LevelChoices|None] = mapped_column(Enum(LevelChoices),nullable=True)
     passed: Mapped[bool|None] = mapped_column(Boolean,nullable=True)
-    completed_at: Mapped[datetime|None] = mapped_column(DateTime,nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow)
+    completed_at: Mapped[datetime|None] = mapped_column(DateTime(timezone=True),nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
