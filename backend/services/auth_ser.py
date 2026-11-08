@@ -3,6 +3,7 @@ from datetime import datetime,timedelta,timezone
 from jose import jwt,JWTError
 from passlib.context import CryptContext
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from backend.models.user import UserProfile,RefreshToken
 from backend.repositories.auth_repo import AuthRepository
 from backend.config import SECRET_KEY,ALGORITHM,ACCESS_TOKEN_LIFETIME,REFRESH_TOKEN_LIFETIME
@@ -40,17 +41,30 @@ class AuthService:
         username = username.strip()
 
         if await self.repository.get_user_by_username(username):
-            raise HTTPException(status_code=400, detail="Username already exists")
+            raise HTTPException(status_code=400, detail={
+                "code":"USERNAME_EXISTS",
+                "message":"Username already exists"
+            })
 
         if await self.repository.get_user_by_email(email):
-            raise HTTPException(status_code=400, detail="Email already exists")
+            raise HTTPException(status_code=400, detail={
+                "code":"EMAIL_EXISTS",
+                "message":"Email already exists"
+            })
 
         user = UserProfile(
             email=email,
             username=username,
             password_hash=self.get_password_hash(password))
 
-        return await self.repository.create_user(user)
+        try:
+            return await self.repository.create_user(user)
+        except IntegrityError:
+            await self.repository.db.rollback()
+            raise HTTPException(status_code=400, detail={
+                "code":"USER_CONFLICT",
+                "message":"Email or username already exists"
+            })
 
 
     async def login(self, email, password):

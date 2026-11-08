@@ -1,12 +1,9 @@
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings,SettingsConfigDict
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-SECRET_KEY=os.getenv("SECRET_KEY")
 
 class Settings(BaseSettings):
     DATABASE_URL:str
+    SECRET_KEY:str = Field(min_length=1)
     REDIS_URL:str="redis://localhost:6379/0"
     ALLOWED_ORIGINS:str="http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,https://lingo-app.vercel.app"
     HOST:str="127.0.0.1"
@@ -25,7 +22,16 @@ class Settings(BaseSettings):
     def allowed_origins_list(self):
         return [o.strip().rstrip("/") for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def secret_key_must_not_be_blank(cls,value: str):
+        value = value.strip()
+        if not value:
+            raise ValueError("SECRET_KEY must not be blank")
+        return value
+
 settings=Settings()
+SECRET_KEY=settings.SECRET_KEY
 ALGORITHM="HS256"
 ACCESS_TOKEN_LIFETIME=30
 REFRESH_TOKEN_LIFETIME=7

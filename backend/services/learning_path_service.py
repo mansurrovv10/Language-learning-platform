@@ -15,6 +15,17 @@ class LearningPathService:
         self.repository = repository
 
     async def start_language(self,user_id: uuid.UUID,language_id: int):
+        language = await self.repository.get_language(language_id)
+        if not language:
+            raise HTTPException(status_code=404,detail={
+                "code":"LANGUAGE_NOT_FOUND",
+                "message":"Language not found"
+            })
+        if not language.is_active:
+            raise HTTPException(status_code=409,detail={
+                "code":"INACTIVE_LANGUAGE",
+                "message":"Language is inactive"
+            })
         return await self.repository.get_or_create_user_language(user_id,language_id)
 
     async def get_path(self,user_id: uuid.UUID,language_id: int):

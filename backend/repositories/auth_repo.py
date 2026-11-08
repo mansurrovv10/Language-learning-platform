@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import UserProfile,RefreshToken
+from backend.models.gamification import Hearts
+from backend.config import MAX_HEARTS
 
 class AuthRepository:
     def __init__(self,db:AsyncSession):
@@ -20,6 +22,8 @@ class AuthRepository:
 
     async def create_user(self,user):
         self.db.add(user)
+        await self.db.flush()
+        self.db.add(Hearts(user_id=user.id,hearts=MAX_HEARTS))
         await self.db.commit()
         await self.db.refresh(user)
         return user

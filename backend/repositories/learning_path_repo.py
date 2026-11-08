@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.course import Course, LevelChoices
 from backend.models.lesson import Lesson
 from backend.models.user_language import UserLanguage
+from backend.models.language import Language
 
 
 class LearningPathRepository:
@@ -16,6 +17,12 @@ class LearningPathRepository:
         result = await self.session.execute(select(UserLanguage).where(
             UserLanguage.user_id == user_id,
             UserLanguage.language_id == language_id))
+        return result.scalar_one_or_none()
+
+    async def get_language(self,language_id: int):
+        result = await self.session.execute(
+            select(Language).where(Language.id == language_id)
+        )
         return result.scalar_one_or_none()
 
     async def get_or_create_user_language(self,user_id: uuid.UUID,language_id: int):
