@@ -20,14 +20,17 @@ class GamificationRepository:
             .order_by(XPHistory.created_at.desc()))
         return result.scalars().all()
 
-    async def add_xp(self,user_id: uuid.UUID,xp: int,reason: str):
+    async def add_xp(self,user_id: uuid.UUID,xp: int,reason: str,commit: bool = True):
         xp_history = XPHistory(user_id=user_id,xp=xp,reason=reason)
 
         self.session.add(xp_history)
-        await self.session.commit()
-        await self.session.refresh(xp_history)
+        await self.session.flush()
 
-        await LeaderboardRepository(self.session).upsert_user(user_id)
+        await LeaderboardRepository(self.session).upsert_user(user_id,commit=False)
+
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(xp_history)
 
         return xp_history
 
@@ -36,23 +39,30 @@ class GamificationRepository:
             select(Streak).where(Streak.user_id == user_id))
         return result.scalar_one_or_none()
 
-    async def create_streak(self,user_id: uuid.UUID):
+    async def create_streak(self,user_id: uuid.UUID,commit: bool = True):
         streak = Streak(user_id=user_id,current_streak=0)
 
         self.session.add(streak)
-        await self.session.commit()
-        await self.session.refresh(streak)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(streak)
+        else:
+            await self.session.flush()
 
         return streak
 
-    async def update_streak(self,streak):
+    async def update_streak(self,streak,commit: bool = True):
         self.session.add(streak)
-        await self.session.commit()
-        await self.session.refresh(streak)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(streak)
+        else:
+            await self.session.flush()
 
         return streak
 
-    async def get_hearts(self,user_id: uuid.UUID,lock: bool = False):
+    async def get_hearts(
+        self,user_id: uuid.UUID,lock: bool = False,commit: bool = True):
         statement = select(Hearts).where(Hearts.user_id == user_id)
 
         if lock:
@@ -66,7 +76,10 @@ class GamificationRepository:
                 pg_insert(Hearts)
                 .values(user_id=user_id,hearts=MAX_HEARTS)
                 .on_conflict_do_nothing(index_elements=["user_id"]))
-            await self.session.commit()
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
             result = await self.session.execute(statement)
             hearts = result.scalar_one()
 
@@ -117,17 +130,20 @@ class GamificationRepository:
             return None
         return hearts.last_heart_lost_at + timedelta(minutes=HEART_REGEN_MINUTES)
 
-    async def get_current_hearts(self,user_id: uuid.UUID):
-        hearts = await self.get_hearts(user_id,lock=True)
+    async def get_current_hearts(self,user_id: uuid.UUID,commit: bool = True):
+        hearts = await self.get_hearts(user_id,lock=True,commit=commit)
 
         if self._apply_regen(hearts,utc_now()):
-            await self.session.commit()
-            await self.session.refresh(hearts)
+            if commit:
+                await self.session.commit()
+                await self.session.refresh(hearts)
+            else:
+                await self.session.flush()
 
         return hearts
 
-    async def lose_heart(self,user_id: uuid.UUID) -> int:
-        await self.get_current_hearts(user_id)
+    async def lose_heart(self,user_id: uuid.UUID,commit: bool = True) -> int:
+        await self.get_current_hearts(user_id,commit=commit)
 
         # last_heart_lost_at өзгөрбөйт, эгер буга чейин коюлган болсо.
         # Таймер 5 -> 4 болгон учурда гана башталат.
@@ -143,10 +159,14 @@ class GamificationRepository:
         remaining = result.scalar_one_or_none()
 
         if remaining is None:
-            await self.session.rollback()
+            if commit:
+                await self.session.rollback()
             return 0
 
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
 
         return remaining
 
@@ -165,8 +185,8 @@ class GamificationRepository:
 
         return len(user_ids)
 
-    async def get_hearts_status(self,user_id: uuid.UUID):
-        hearts = await self.get_current_hearts(user_id)
+    async def get_hearts_status(self,user_id: uuid.UUID,commit: bool = True):
+        hearts = await self.get_current_hearts(user_id,commit=commit)
 
         return {
             "hearts": hearts.hearts,

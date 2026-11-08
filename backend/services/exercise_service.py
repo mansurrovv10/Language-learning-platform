@@ -1,17 +1,22 @@
 import re
 import unicodedata
 import uuid
+import hashlib
+import json
 from datetime import date,timedelta
 
-from backend.models.exercise import Exercise
+from backend.models.exercise import Exercise,ExerciseType
 from backend.repositories.exercise_repo import ExerciseRepository
 from backend.repositories.progress_repo import ProgressRepository
 from backend.repositories.gamification_repo import GamificationRepository
 from backend.repositories.achievement_repo import AchievementRepository
 from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
+from backend.repositories.exercise_submission_repo import ExerciseSubmissionRepository
 from backend.schemas.exercise_schema import ExerciseCreate,ExerciseUpdate,ExerciseResult,ExerciseSubmit
+from backend.schemas.gamification_schema import HeartsResponse
 from backend.services.achievement_service import AchievementService
 from backend.time import bishkek_date
+from backend.config import MAX_HEARTS
 
 
 class NotEnoughHeartsError(Exception):
@@ -30,11 +35,13 @@ class ExerciseService:
         progress_repository: ProgressRepository,
         exercise_progress_repository: ExerciseProgressRepository,
         gamification_repository: GamificationRepository,
-        achievement_repository: AchievementRepository):
+        achievement_repository: AchievementRepository,
+        submission_repository: ExerciseSubmissionRepository | None = None):
         self.repository = repository
         self.progress_repository = progress_repository
         self.exercise_progress_repository = exercise_progress_repository
         self.gamification_repository = gamification_repository
+        self.submission_repository = submission_repository
         self.achievement_service = AchievementService(
             achievement_repository,
             gamification_repository)
@@ -77,7 +84,30 @@ class ExerciseService:
         exercise_id: int,
         data: ExerciseSubmit,
         user_id: uuid.UUID,
+        idempotency_key: str | None = None,
         is_admin: bool = False):
+        if is_admin:
+            exercise = await self.repository.get_by_id(exercise_id)
+            if not exercise:
+                return None
+            correct = self._check_answer(exercise,data.answer)
+            return ExerciseResult(
+                correct=correct,
+                score=10 if correct else 0,
+                hearts_left=MAX_HEARTS,
+                heart_status=None,
+            )
+
+        if self.submission_repository is not None:
+            if not idempotency_key or not idempotency_key.strip():
+                raise ValueError("IDEMPOTENCY_KEY_REQUIRED")
+            return await self._submit_atomic(
+                exercise_id,data,user_id,idempotency_key.strip())
+
+        return await self._submit_legacy(exercise_id,data,user_id)
+
+    async def _submit_legacy(
+        self,exercise_id: int,data: ExerciseSubmit,user_id: uuid.UUID):
         exercise = await self.repository.get_by_id(exercise_id)
 
         if not exercise:
@@ -91,14 +121,14 @@ class ExerciseService:
 
         # Жүрөкчө 0 болсо: жаңы exercise бөгөттөлөт,
         # мурун аткарылган exercise (practice) жана админ үчүн бөгөттөлбөйт.
-        if hearts.hearts <= 0 and not already_exercise_completed and not is_admin:
+        if hearts.hearts <= 0 and not already_exercise_completed:
             raise NotEnoughHeartsError(
                 self.gamification_repository.seconds_to_next_heart(hearts))
 
         correct = self._check_answer(exercise,data.answer)
         score = 10 if correct else 0
 
-        if not correct and not already_exercise_completed and not is_admin:
+        if not correct and not already_exercise_completed:
             hearts_left = await self.gamification_repository.lose_heart(user_id)
         else:
             hearts_left = hearts.hearts
@@ -131,7 +161,100 @@ class ExerciseService:
             hearts_left=hearts_left
         )
 
-    async def _check_exercise_achievements(self,user_id: uuid.UUID):
+    async def _submit_atomic(
+        self,exercise_id: int,data: ExerciseSubmit,user_id: uuid.UUID,
+        idempotency_key: str):
+        request_hash = hashlib.sha256(json.dumps(
+            {"exercise_id":exercise_id,"answer":data.answer},
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",",":"),
+            allow_nan=False,
+        ).encode("utf-8")).hexdigest()
+
+        session = self.repository.session
+        try:
+            exercise = await self.repository.get_by_id(exercise_id)
+            if not exercise:
+                await session.rollback()
+                return None
+
+            submission,replayed = await self.submission_repository.get_or_reserve(
+                user_id,idempotency_key,exercise_id,request_hash)
+            if replayed:
+                result = ExerciseResult.model_validate(submission.response)
+                await session.commit()
+                return result
+
+            hearts = await self.gamification_repository.get_current_hearts(
+                user_id,commit=False)
+            exercise_progress = (
+                await self.exercise_progress_repository.get_by_user_and_exercise(
+                    user_id,exercise.id)
+            )
+            already_completed = bool(exercise_progress and exercise_progress.completed)
+
+            if hearts.hearts <= 0 and not already_completed:
+                raise NotEnoughHeartsError(
+                    self.gamification_repository.seconds_to_next_heart(hearts))
+
+            correct = self._check_answer(exercise,data.answer)
+            score = 10 if correct else 0
+            if not correct and not already_completed:
+                hearts_left = await self.gamification_repository.lose_heart(
+                    user_id,commit=False)
+            else:
+                hearts_left = hearts.hearts
+
+            await self.exercise_progress_repository.save_result(
+                user_id,exercise.id,correct,score,commit=False)
+            progress = await self.progress_repository.get_by_user_and_lesson(
+                user_id,exercise.lesson_id)
+            lesson_completed = (
+                await self.exercise_progress_repository.are_lesson_exercises_completed(
+                    user_id,exercise.lesson_id)
+            )
+            if progress:
+                if lesson_completed and not progress.completed:
+                    await self.progress_repository.update(
+                        progress.id,completed=True,score=100,commit=False)
+            else:
+                await self.progress_repository.create(
+                    user_id=user_id,
+                    lesson_id=exercise.lesson_id,
+                    completed=lesson_completed,
+                    score=100 if lesson_completed else 0,
+                    commit=False,
+                )
+
+            if correct and not already_completed:
+                await self.gamification_repository.add_xp(
+                    user_id=user_id,
+                    xp=10,
+                    reason="exercise_completed",
+                    commit=False,
+                )
+                await self._update_streak(user_id,commit=False)
+                await self._check_exercise_achievements(user_id,commit=False)
+
+            heart_status = await self.gamification_repository.get_hearts_status(
+                user_id,commit=False)
+            result = ExerciseResult(
+                correct=correct,
+                score=score,
+                hearts_left=hearts_left,
+                heart_status=HeartsResponse(**heart_status),
+            )
+            await self.submission_repository.store_response(
+                submission,result.model_dump(mode="json"))
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        return result
+
+    async def _check_exercise_achievements(
+        self,user_id: uuid.UUID,commit: bool = True):
         xp_history = await self.gamification_repository.get_xp_history(
             user_id
         )
@@ -145,14 +268,16 @@ class ExerciseService:
         await self.achievement_service.check_achievements(
             user_id,
             "exercises",
-            exercise_count
+            exercise_count,
+            commit=commit,
         )
 
-    async def _update_streak(self,user_id: uuid.UUID):
+    async def _update_streak(self,user_id: uuid.UUID,commit: bool = True):
         streak = await self.gamification_repository.get_streak(user_id)
 
         if not streak:
-            streak = await self.gamification_repository.create_streak(user_id)
+            streak = await self.gamification_repository.create_streak(
+                user_id,commit=commit)
 
         today = bishkek_date()
 
@@ -166,7 +291,7 @@ class ExerciseService:
 
         streak.last_activity = today
 
-        await self.gamification_repository.update_streak(streak)
+        await self.gamification_repository.update_streak(streak,commit=commit)
 
     def _normalize(self,value):
         if isinstance(value,bool):
@@ -230,18 +355,25 @@ class ExerciseService:
 
         return value
 
-    def _answers_equal(self,expected,actual):
+    def _answers_equal(self,expected,actual,unordered_lists: bool = False):
         expected = self._as_pairs(self._normalize(self._unwrap(expected)))
         actual = self._as_pairs(self._normalize(self._unwrap(actual)))
 
-        return self._values_equal(expected,actual)
+        return self._values_equal(expected,actual,unordered_lists)
 
-    def _values_equal(self,expected,actual):
+    def _values_equal(self,expected,actual,unordered_lists: bool = False):
         if expected == actual:
             return True
 
         if isinstance(expected,list) and isinstance(actual,list):
-            return self._collections_equal(expected,actual)
+            if unordered_lists:
+                return self._collections_equal(expected,actual)
+            if len(expected) != len(actual):
+                return False
+            return all(
+                self._values_equal(expected_item,actual_item)
+                for expected_item,actual_item in zip(expected,actual)
+            )
 
         if isinstance(expected,dict) and isinstance(actual,dict):
             if expected.keys() != actual.keys():
@@ -269,4 +401,10 @@ class ExerciseService:
         return True
 
     def _check_answer(self,exercise: Exercise,answer):
-        return self._answers_equal(exercise.correct_answer,answer)
+        if exercise.correct_answer is None or answer is None:
+            return False
+        return self._answers_equal(
+            exercise.correct_answer,
+            answer,
+            unordered_lists=exercise.type == ExerciseType.MATCH,
+        )

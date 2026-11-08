@@ -17,7 +17,9 @@ class ExerciseProgressRepository:
             UserExerciseProgress.exercise_id == exercise_id))
         return result.scalar_one_or_none()
 
-    async def save_result(self,user_id: uuid.UUID,exercise_id: int,completed: bool,score: int):
+    async def save_result(
+        self,user_id: uuid.UUID,exercise_id: int,completed: bool,score: int,
+        commit: bool = True):
         progress = await self.get_by_user_and_exercise(user_id,exercise_id)
         if not progress:
             progress = UserExerciseProgress(user_id=user_id,exercise_id=exercise_id,
@@ -26,8 +28,11 @@ class ExerciseProgressRepository:
         elif completed and score > progress.score:
             progress.completed = True
             progress.score = score
-        await self.session.commit()
-        await self.session.refresh(progress)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(progress)
+        else:
+            await self.session.flush()
         return progress
 
     async def are_lesson_exercises_completed(self,user_id: uuid.UUID,lesson_id: int):

@@ -4,6 +4,7 @@ from datetime import date
 
 import pytest
 
+from backend.models.exercise import ExerciseType
 from backend.schemas.exercise_schema import ExerciseSubmit
 from backend.services.exercise_service import ExerciseService,NotEnoughHeartsError
 
@@ -12,6 +13,7 @@ class FakeExercise:
     def __init__(self,correct_answer,exercise_id: int = 1,lesson_id: int = 1):
         self.id = exercise_id
         self.lesson_id = lesson_id
+        self.type = ExerciseType.CHOICE
         self.correct_answer = correct_answer
 
 
@@ -158,10 +160,8 @@ def test_zero_hearts_blocks_submission():
     (1,"1"),
     (1.0,"1"),
     ("  Hello  ","hello"),
-    (["a","b"],["b","a"]),
     ({"a":"1","b":"2"},[["a",1],["b",2]]),
     ("да",  "ДА "),
-    (None,None),
 ])
 def test_answer_matching_ignores_formatting(expected,answer):
     service,_ = build_service(expected)

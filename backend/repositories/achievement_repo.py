@@ -45,11 +45,15 @@ class AchievementRepository:
                 UserAchievement.achievement_id == achievement_id))
         return result.scalar_one_or_none()
 
-    async def create_user_achievement(self,user_id: uuid.UUID,achievement_id: int):
+    async def create_user_achievement(
+        self,user_id: uuid.UUID,achievement_id: int,commit: bool = True):
         user_achievement = UserAchievement(user_id=user_id,achievement_id=achievement_id)
 
         self.session.add(user_achievement)
-        await self.session.commit()
-        await self.session.refresh(user_achievement)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(user_achievement)
+        else:
+            await self.session.flush()
 
         return user_achievement

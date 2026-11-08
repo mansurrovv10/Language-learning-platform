@@ -50,7 +50,7 @@ class AchievementService:
         return await self.repository.get_user_achievements(user_id)
 
     async def check_achievements(
-        self,user_id: uuid.UUID,category: str,count: int):
+        self,user_id: uuid.UUID,category: str,count: int,commit: bool = True):
         achievements = await self.repository.get_all()
         awarded = []
 
@@ -66,7 +66,8 @@ class AchievementService:
             if count < conditions.get("count", 0):
                 continue
 
-            user_achievement = await self.check_and_award(user_id,achievement.id)
+            user_achievement = await self.check_and_award(
+                user_id,achievement.id,commit=commit)
 
             if user_achievement:
                 awarded.append(user_achievement)
@@ -74,7 +75,7 @@ class AchievementService:
         return awarded
 
     async def check_and_award(
-        self,user_id: uuid.UUID,achievement_id: int):
+        self,user_id: uuid.UUID,achievement_id: int,commit: bool = True):
         achievement = await self.repository.get_by_id(achievement_id)
 
         if not achievement:
@@ -85,11 +86,13 @@ class AchievementService:
         if existing:
             return existing
 
-        user_achievement = await self.repository.create_user_achievement(user_id,achievement_id)
+        user_achievement = await self.repository.create_user_achievement(
+            user_id,achievement_id,commit=commit)
         if achievement.xp_reward > 0:
             await self.gamification_repository.add_xp(
                 user_id=user_id,
                 xp=achievement.xp_reward,
-                reason=f"achievement:{achievement.title}")
+                reason=f"achievement:{achievement.title}",
+                commit=commit)
 
         return user_achievement

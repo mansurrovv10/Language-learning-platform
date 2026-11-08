@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Depends,HTTPException
+from fastapi import APIRouter,Depends,Header,HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.repositories.achievement_repo import AchievementRepository
 from backend.database.db import get_session
@@ -6,6 +6,8 @@ from backend.repositories.exercise_repo import ExerciseRepository
 from backend.repositories.progress_repo import ProgressRepository
 from backend.repositories.gamification_repo import GamificationRepository
 from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
+from backend.repositories.exercise_submission_repo import (
+    ExerciseSubmissionRepository,IdempotencyConflictError)
 from backend.schemas.exercise_schema import (ExerciseCreate,ExerciseUpdate,ExerciseResponse,
                                              ExerciseSubmit,ExerciseResult)
 from backend.services.exercise_service import ExerciseService,NotEnoughHeartsError
@@ -24,9 +26,10 @@ def get_exercise_service(session: AsyncSession = Depends(get_session)):
     exercise_progress_repository = ExerciseProgressRepository(session)
     gamification_repository = GamificationRepository(session)
     achievement_repository = AchievementRepository(session)
+    submission_repository = ExerciseSubmissionRepository(session)
 
     return ExerciseService(exercise_repository,progress_repository,exercise_progress_repository,
-        gamification_repository,achievement_repository)
+        gamification_repository,achievement_repository,submission_repository)
 
 
 def get_learning_path_service(session: AsyncSession = Depends(get_session)):
@@ -98,6 +101,7 @@ async def delete_exercise(
 async def submit_exercise(
     exercise_id: int,
     data: ExerciseSubmit,
+    idempotency_key: str | None = Header(default=None,alias="Idempotency-Key"),
     service: ExerciseService = Depends(get_exercise_service),
     current_user: UserProfile = Depends(get_current_user),
     access_service: LearningPathService = Depends(get_learning_path_service)
@@ -107,14 +111,18 @@ async def submit_exercise(
     if not exercise:
         raise HTTPException(status_code=404,detail="Exercise not found")
 
-    if current_user.role.value != "admin":
+    is_admin = current_user.role.value == "admin"
+
+    if not is_admin:
         await access_service.ensure_lesson_access(current_user.id,exercise.lesson_id)
 
     try:
         result = await service.submit_exercise(
             exercise_id,
             data,
-            current_user.id
+            current_user.id,
+            idempotency_key=idempotency_key,
+            is_admin=is_admin
         )
     except NotEnoughHeartsError as e:
         raise HTTPException(status_code=409,detail={
@@ -122,7 +130,17 @@ async def submit_exercise(
             "message":"Not enough hearts",
             "seconds_to_next_heart":e.seconds_to_next_heart
         })
+    except IdempotencyConflictError:
+        raise HTTPException(status_code=409,detail={
+            "code":"IDEMPOTENCY_CONFLICT",
+            "message":"Idempotency key was already used for another request"
+        })
     except ValueError as e:
+        if str(e) == "IDEMPOTENCY_KEY_REQUIRED":
+            raise HTTPException(status_code=422,detail={
+                "code":"IDEMPOTENCY_KEY_REQUIRED",
+                "message":"Idempotency-Key header is required"
+            })
         raise HTTPException(status_code=400,detail=str(e))
 
     if result is None:

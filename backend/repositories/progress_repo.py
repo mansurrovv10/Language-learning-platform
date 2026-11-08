@@ -36,7 +36,9 @@ class ProgressRepository:
                 UserProgress.lesson_id == lesson_id))
         return result.scalar_one_or_none()
 
-    async def create(self,user_id: uuid.UUID,lesson_id: int,completed: bool = False,score: int = 0):
+    async def create(
+        self,user_id: uuid.UUID,lesson_id: int,completed: bool = False,score: int = 0,
+        commit: bool = True):
         progress = UserProgress(
             user_id=user_id,
             lesson_id=lesson_id,
@@ -44,12 +46,17 @@ class ProgressRepository:
             score=score)
 
         self.session.add(progress)
-        await self.session.commit()
-        await self.session.refresh(progress)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(progress)
+        else:
+            await self.session.flush()
 
         return progress
 
-    async def update(self,progress_id: int,completed: bool | None = None,score: int | None = None):
+    async def update(
+        self,progress_id: int,completed: bool | None = None,score: int | None = None,
+        commit: bool = True):
         progress = await self.get_by_id(progress_id)
 
         if not progress:
@@ -64,8 +71,11 @@ class ProgressRepository:
         if score is not None:
             progress.score = score
 
-        await self.session.commit()
-        await self.session.refresh(progress)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(progress)
+        else:
+            await self.session.flush()
 
         return progress
 

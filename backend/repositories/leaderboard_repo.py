@@ -46,7 +46,7 @@ class LeaderboardRepository:
 
         return result.scalar_one() + 1
 
-    async def upsert_user(self,user_id: uuid.UUID):
+    async def upsert_user(self,user_id: uuid.UUID,commit: bool = True):
         total = await self.get_user_total_xp(user_id)
         rank = await self.get_user_rank(user_id)
 
@@ -68,8 +68,11 @@ class LeaderboardRepository:
             entry.rank = rank
             entry.updated_at = utc_now()
 
-        await self.session.commit()
-        await self.session.refresh(entry)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(entry)
+        else:
+            await self.session.flush()
 
         return entry
 

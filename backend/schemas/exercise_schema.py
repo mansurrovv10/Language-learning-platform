@@ -3,6 +3,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict
 
 from backend.models.exercise import ExerciseType
+from backend.schemas.gamification_schema import HeartsResponse
 
 
 class ExerciseCreate(BaseModel):
@@ -39,3 +40,4 @@ class ExerciseResult(BaseModel):
     correct: bool
     score: int
     hearts_left: int
+    heart_status: HeartsResponse | None = None
