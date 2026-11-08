@@ -47,26 +47,17 @@ class LeaderboardRepository:
         return result.scalar_one() + 1
 
     async def upsert_user(self,user_id: uuid.UUID,commit: bool = True):
-        total = await self.get_user_total_xp(user_id)
-        rank = await self.get_user_rank(user_id)
-
-        if rank is None:
-            rank = 999999
-
-        entry = await self.get_user(user_id)
-
+        entries = await self._sync_from_xp_history()
+        entry = next(
+            (item for item in entries if item.user_id == user_id),None
+        )
         if entry is None:
             entry = Leaderboard(
                 user_id=user_id,
-                xp=total,
-                rank=rank,
+                xp=0,
+                rank=999999,
                 updated_at=utc_now())
-
             self.session.add(entry)
-        else:
-            entry.xp = total
-            entry.rank = rank
-            entry.updated_at = utc_now()
 
         if commit:
             await self.session.commit()
@@ -76,29 +67,42 @@ class LeaderboardRepository:
 
         return entry
 
-    async def recompute_all(self) -> int:
+    async def _sync_from_xp_history(self) -> list[Leaderboard]:
         result = await self.session.execute(
             select(XPHistory.user_id,func.sum(XPHistory.xp).label("total"))
             .group_by(XPHistory.user_id)
             .order_by(func.sum(XPHistory.xp).desc()))
 
         rows = result.all()
+        entries = []
+        previous_total = None
+        rank = 0
 
         for index,row in enumerate(rows,start=1):
+            if row.total != previous_total:
+                rank = index
+                previous_total = row.total
             entry = await self.get_user(row.user_id)
 
             if entry is None:
-                self.session.add(
-                    Leaderboard(
-                        user_id=row.user_id,
-                        xp=row.total,
-                        rank=index,
-                        updated_at=utc_now()))
+                entry = Leaderboard(
+                    user_id=row.user_id,
+                    xp=row.total,
+                    rank=rank,
+                    updated_at=utc_now())
+                self.session.add(entry)
             else:
                 entry.xp = row.total
-                entry.rank = index
+                entry.rank = rank
                 entry.updated_at = utc_now()
+            entries.append(entry)
+
+        await self.session.flush()
+        return entries
+
+    async def recompute_all(self) -> int:
+        entries = await self._sync_from_xp_history()
 
         await self.session.commit()
 
-        return len(rows)
+        return len(entries)

@@ -12,8 +12,9 @@ from backend.models.course import Course, LevelChoices
 from backend.models.exercise import Exercise, ExerciseType
 from backend.models.exercise_progress import UserExerciseProgress
 from backend.models.exercise_submission import ExerciseSubmission
-from backend.models.gamification import Hearts, XPHistory
+from backend.models.gamification import Hearts,Streak,XPHistory
 from backend.models.language import Language
+from backend.models.leaderboard import Leaderboard
 from backend.models.lesson import Lesson
 from backend.models.progress import UserProgress
 from backend.models.user import UserRole
@@ -21,6 +22,7 @@ from backend.repositories.achievement_repo import AchievementRepository
 from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
 from backend.repositories.exercise_repo import ExerciseRepository
 from backend.repositories.gamification_repo import GamificationRepository
+from backend.repositories.leaderboard_repo import LeaderboardRepository
 from backend.repositories.progress_repo import ProgressRepository
 from backend.schemas.exercise_schema import ExerciseSubmit
 from backend.services.auth_ser import AuthService
@@ -197,9 +199,18 @@ async def test_first_correct_completion_awards_xp_once(db_session):
             UserExerciseProgress.exercise_id == exercise.id,
         )
     )
+    streak = await db_session.scalar(select(Streak).where(Streak.user_id == user.id))
+    leaderboard = await db_session.scalar(
+        select(Leaderboard).where(Leaderboard.user_id == user.id)
+    )
 
     assert xp == 10
     assert progress_count == 1
+    assert streak.current_streak == 1
+    assert leaderboard.xp == 10
+    assert leaderboard.rank == await LeaderboardRepository(
+        db_session
+    ).get_user_rank(user.id)
 
 
 async def test_late_failure_rolls_back_all_game_state(db_session):

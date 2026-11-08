@@ -55,14 +55,11 @@ async def get_progress_by_id(progress_id: int,service: ProgressService = Depends
 @router.put("/{progress_id}",response_model=ProgressResponse)
 async def update_progress(progress_id: int,data: ProgressUpdate,
     service: ProgressService = Depends(get_progress_service),
-    current_user: UserProfile = Depends(get_current_user)):
+    current_user: UserProfile = Depends(require_admin)):
     progress = await service.get_by_id(progress_id)
 
     if not progress:
         raise HTTPException(status_code=404,detail="Progress not found")
-
-    if progress.user_id != current_user.id and current_user.role.value != "admin":
-        raise HTTPException(status_code=403,detail="Access denied")
 
     return await service.update(progress_id,data.completed,data.score)
 

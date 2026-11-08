@@ -3,7 +3,6 @@ import unicodedata
 import uuid
 import hashlib
 import json
-from datetime import date,timedelta
 
 from backend.models.exercise import Exercise,ExerciseType
 from backend.repositories.exercise_repo import ExerciseRepository
@@ -15,7 +14,8 @@ from backend.repositories.exercise_submission_repo import ExerciseSubmissionRepo
 from backend.schemas.exercise_schema import ExerciseCreate,ExerciseUpdate,ExerciseResult,ExerciseSubmit
 from backend.schemas.gamification_schema import HeartsResponse
 from backend.services.achievement_service import AchievementService
-from backend.time import bishkek_date
+from backend.services.gamification_service import GamificationService
+from backend.time import utc_now
 from backend.config import MAX_HEARTS
 
 
@@ -152,7 +152,9 @@ class ExerciseService:
                 reason="exercise_completed"
             )
 
-            await self._update_streak(user_id)
+            await GamificationService(
+                self.gamification_repository
+            ).advance_streak_for_learning(user_id,utc_now())
             await self._check_exercise_achievements(user_id)
 
         return ExerciseResult(
@@ -234,7 +236,9 @@ class ExerciseService:
                     reason="exercise_completed",
                     commit=False,
                 )
-                await self._update_streak(user_id,commit=False)
+                await GamificationService(
+                    self.gamification_repository
+                ).advance_streak_for_learning(user_id,utc_now(),commit=False)
                 await self._check_exercise_achievements(user_id,commit=False)
 
             heart_status = await self.gamification_repository.get_hearts_status(
@@ -271,27 +275,6 @@ class ExerciseService:
             exercise_count,
             commit=commit,
         )
-
-    async def _update_streak(self,user_id: uuid.UUID,commit: bool = True):
-        streak = await self.gamification_repository.get_streak(user_id)
-
-        if not streak:
-            streak = await self.gamification_repository.create_streak(
-                user_id,commit=commit)
-
-        today = bishkek_date()
-
-        if streak.last_activity == today:
-            return
-
-        if streak.last_activity == today - timedelta(days=1):
-            streak.current_streak += 1
-        else:
-            streak.current_streak = 1
-
-        streak.last_activity = today
-
-        await self.gamification_repository.update_streak(streak,commit=commit)
 
     def _normalize(self,value):
         if isinstance(value,bool):

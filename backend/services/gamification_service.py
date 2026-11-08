@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import datetime,timedelta
 from backend.repositories.gamification_repo import GamificationRepository
 from backend.time import bishkek_date
 
@@ -20,13 +20,18 @@ class GamificationService:
     async def get_hearts_status(self,user_id: uuid.UUID):
         return await self.repository.get_hearts_status(user_id)
 
-    async def update_streak(self,user_id: uuid.UUID):
+    async def advance_streak_for_learning(
+        self,
+        user_id: uuid.UUID,
+        occurred_at: datetime,
+        commit: bool = True,
+    ):
         streak = await self.repository.get_streak(user_id)
 
         if not streak:
-            streak = await self.repository.create_streak(user_id)
+            streak = await self.repository.create_streak(user_id,commit=commit)
 
-        today = bishkek_date()
+        today = bishkek_date(occurred_at)
 
         if streak.last_activity == today:
             return streak
@@ -38,4 +43,4 @@ class GamificationService:
 
         streak.last_activity = today
 
-        return await self.repository.update_streak(streak)
+        return await self.repository.update_streak(streak,commit=commit)
