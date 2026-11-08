@@ -5,7 +5,7 @@ from backend.repositories.gamification_repo import GamificationRepository
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(timezone.utc)
 
 
 class FakeHearts:
@@ -74,6 +74,24 @@ def test_seconds_to_next_heart_is_zero_at_full_hearts():
 
     assert repository.seconds_to_next_heart(FakeHearts(5)) == 0
     assert repository.seconds_to_next_heart(FakeHearts(3)) == 0
+
+
+def test_next_heart_at_is_thirty_minutes_after_the_anchor():
+    repository = GamificationRepository(None)
+    anchor = datetime(2026,11,8,10,0,tzinfo=timezone.utc)
+    hearts = FakeHearts(4,anchor)
+    next_heart_at = getattr(repository,"next_heart_at",None)
+
+    assert callable(next_heart_at)
+    assert next_heart_at(hearts) == anchor + timedelta(minutes=30)
+
+
+def test_next_heart_at_is_none_when_full():
+    repository = GamificationRepository(None)
+    next_heart_at = getattr(repository,"next_heart_at",None)
+
+    assert callable(next_heart_at)
+    assert next_heart_at(FakeHearts(5)) is None
 
 
 def test_seconds_to_next_heart_never_goes_negative():

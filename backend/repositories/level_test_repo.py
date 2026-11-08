@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +8,7 @@ from backend.models.user_language import UserLanguage
 from backend.models.course import Course
 from backend.models.lesson import Lesson
 from backend.models.progress import UserProgress
+from backend.time import utc_now
 
 
 class LevelTestRepository:
@@ -107,7 +107,7 @@ class LevelTestRepository:
         attempt.score = score
         attempt.passed = passed
         attempt.result_level = result_level
-        attempt.completed_at = datetime.utcnow()
+        attempt.completed_at = utc_now()
         await self.session.commit()
         await self.session.refresh(attempt)
         return attempt

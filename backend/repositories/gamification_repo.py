@@ -1,16 +1,13 @@
 import uuid
-from datetime import datetime,timedelta,timezone
+from datetime import datetime,timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.gamification import XPHistory, Streak, Hearts
 from backend.repositories.leaderboard_repo import LeaderboardRepository
 from backend.config import MAX_HEARTS, HEART_REGEN_MINUTES
-
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+from backend.time import utc_now
 
 
 class GamificationRepository:
@@ -110,15 +107,20 @@ class GamificationRepository:
         if hearts.hearts >= MAX_HEARTS or not hearts.last_heart_lost_at:
             return 0
 
-        elapsed = (utcnow() - hearts.last_heart_lost_at).total_seconds()
+        elapsed = (utc_now() - hearts.last_heart_lost_at).total_seconds()
         remaining = HEART_REGEN_MINUTES * 60 - elapsed
 
         return max(0,int(remaining))
 
+    def next_heart_at(self,hearts: Hearts) -> datetime | None:
+        if hearts.hearts >= MAX_HEARTS or not hearts.last_heart_lost_at:
+            return None
+        return hearts.last_heart_lost_at + timedelta(minutes=HEART_REGEN_MINUTES)
+
     async def get_current_hearts(self,user_id: uuid.UUID):
         hearts = await self.get_hearts(user_id,lock=True)
 
-        if self._apply_regen(hearts,utcnow()):
+        if self._apply_regen(hearts,utc_now()):
             await self.session.commit()
             await self.session.refresh(hearts)
 
@@ -127,10 +129,15 @@ class GamificationRepository:
     async def lose_heart(self,user_id: uuid.UUID) -> int:
         await self.get_current_hearts(user_id)
 
+        # last_heart_lost_at өзгөрбөйт, эгер буга чейин коюлган болсо.
+        # Таймер 5 -> 4 болгон учурда гана башталат.
         result = await self.session.execute(
             update(Hearts)
             .where(Hearts.user_id == user_id,Hearts.hearts > 0)
-            .values(hearts=Hearts.hearts - 1,last_heart_lost_at=utcnow())
+            .values(
+                hearts=Hearts.hearts - 1,
+                last_heart_lost_at=func.coalesce(
+                    Hearts.last_heart_lost_at,utc_now()))
             .returning(Hearts.hearts))
 
         remaining = result.scalar_one_or_none()
@@ -144,7 +151,7 @@ class GamificationRepository:
         return remaining
 
     async def refill_due_hearts(self) -> int:
-        due_by = utcnow() - timedelta(minutes=HEART_REGEN_MINUTES)
+        due_by = utc_now() - timedelta(minutes=HEART_REGEN_MINUTES)
 
         result = await self.session.execute(
             select(Hearts.user_id).where(
@@ -164,5 +171,6 @@ class GamificationRepository:
         return {
             "hearts": hearts.hearts,
             "max_hearts": MAX_HEARTS,
-            "seconds_to_next_heart": self.seconds_to_next_heart(hearts)
+            "seconds_to_next_heart": self.seconds_to_next_heart(hearts),
+            "next_heart_at": self.next_heart_at(hearts),
         }

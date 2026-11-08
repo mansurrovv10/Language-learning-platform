@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from backend.database.base import Base
 from backend.models.course import LevelChoices
 from backend.models.exercise import ExerciseType
+from backend.time import utc_now
 
 
 class LevelTest(Base):
@@ -17,7 +18,7 @@ class LevelTest(Base):
     target_level: Mapped[LevelChoices|None] = mapped_column(Enum(LevelChoices),nullable=True)
     passing_score: Mapped[int] = mapped_column(Integer,default=70)
     is_active: Mapped[bool] = mapped_column(Boolean,default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utc_now)
 
 
 class LevelTestQuestion(Base):
@@ -44,4 +45,4 @@ class LevelTestAttempt(Base):
     result_level: Mapped[LevelChoices|None] = mapped_column(Enum(LevelChoices),nullable=True)
     passed: Mapped[bool|None] = mapped_column(Boolean,nullable=True)
     completed_at: Mapped[datetime|None] = mapped_column(DateTime(timezone=True),nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utc_now)

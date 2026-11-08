@@ -1,6 +1,7 @@
 import uuid
-from datetime import date,timedelta
+from datetime import timedelta
 from backend.repositories.gamification_repo import GamificationRepository
+from backend.time import bishkek_date
 
 
 class GamificationService:
@@ -25,7 +26,7 @@ class GamificationService:
         if not streak:
             streak = await self.repository.create_streak(user_id)
 
-        today = date.today()
+        today = bishkek_date()
 
         if streak.last_activity == today:
             return streak

@@ -1,8 +1,7 @@
-from datetime import date
-
 from backend.models.challenge import DailyChallenge
 from backend.repositories.challenge_repo import ChallengeRepository
 from backend.schemas.challenge_schema import ChallengeCreate,ChallengeUpdate
+from backend.time import bishkek_date
 
 
 class ChallengeService:
@@ -16,7 +15,7 @@ class ChallengeService:
         return await self.repository.get_by_id(challenge_id)
 
     async def get_today(self):
-        return await self.repository.get_by_date(date.today())
+        return await self.repository.get_by_date(bishkek_date())
 
     async def create(self,data: ChallengeCreate):
         existing = await self.repository.get_by_date(data.challenge_date)

@@ -4,6 +4,7 @@ from sqlalchemy import String,Text,ForeignKey,Integer,DateTime,UniqueConstraint,
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped,mapped_column
 from backend.database.base import Base
+from backend.time import utc_now
 
 
 class Achievement(Base):
@@ -24,4 +25,4 @@ class UserAchievement(Base):
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     achievement_id: Mapped[int] = mapped_column(Integer,ForeignKey("achievement.id"))
-    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utc_now)

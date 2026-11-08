@@ -27,3 +27,4 @@ class HeartsResponse(BaseModel):
     hearts: int
     max_hearts: int
     seconds_to_next_heart: int
+    next_heart_at: datetime | None = None

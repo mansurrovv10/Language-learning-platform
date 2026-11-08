@@ -4,6 +4,7 @@ from sqlalchemy import String, ForeignKey, Integer, DateTime, Date, UniqueConstr
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database.base import Base
+from backend.time import utc_now
 
 
 class XPHistory(Base):
@@ -13,7 +14,7 @@ class XPHistory(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
     xp: Mapped[int] = mapped_column(Integer)
     reason: Mapped[str] = mapped_column(String)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utc_now)
 
 
 class Streak(Base):

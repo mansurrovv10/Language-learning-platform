@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.progress import UserProgress
+from backend.time import utc_now
 
 
 class ProgressRepository:
@@ -59,7 +59,7 @@ class ProgressRepository:
             progress.completed = completed
 
             if completed:
-                progress.completed_at = datetime.utcnow()
+                progress.completed_at = utc_now()
 
         if score is not None:
             progress.score = score

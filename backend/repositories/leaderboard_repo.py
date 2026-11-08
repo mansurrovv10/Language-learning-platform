@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import select,func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.gamification import XPHistory
 from backend.models.leaderboard import Leaderboard
+from backend.time import utc_now
 
 
 class LeaderboardRepository:
@@ -60,13 +60,13 @@ class LeaderboardRepository:
                 user_id=user_id,
                 xp=total,
                 rank=rank,
-                updated_at=datetime.utcnow())
+                updated_at=utc_now())
 
             self.session.add(entry)
         else:
             entry.xp = total
             entry.rank = rank
-            entry.updated_at = datetime.utcnow()
+            entry.updated_at = utc_now()
 
         await self.session.commit()
         await self.session.refresh(entry)
@@ -90,11 +90,11 @@ class LeaderboardRepository:
                         user_id=row.user_id,
                         xp=row.total,
                         rank=index,
-                        updated_at=datetime.utcnow()))
+                        updated_at=utc_now()))
             else:
                 entry.xp = row.total
                 entry.rank = index
-                entry.updated_at = datetime.utcnow()
+                entry.updated_at = utc_now()
 
         await self.session.commit()
 

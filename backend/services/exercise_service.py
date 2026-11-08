@@ -11,6 +11,7 @@ from backend.repositories.achievement_repo import AchievementRepository
 from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
 from backend.schemas.exercise_schema import ExerciseCreate,ExerciseUpdate,ExerciseResult,ExerciseSubmit
 from backend.services.achievement_service import AchievementService
+from backend.time import bishkek_date
 
 
 class NotEnoughHeartsError(Exception):
@@ -75,7 +76,8 @@ class ExerciseService:
         self,
         exercise_id: int,
         data: ExerciseSubmit,
-        user_id: uuid.UUID):
+        user_id: uuid.UUID,
+        is_admin: bool = False):
         exercise = await self.repository.get_by_id(exercise_id)
 
         if not exercise:
@@ -83,18 +85,20 @@ class ExerciseService:
 
         hearts = await self.gamification_repository.get_current_hearts(user_id)
 
-        if hearts.hearts <= 0:
+        exercise_progress = await self.exercise_progress_repository.get_by_user_and_exercise(
+            user_id,exercise.id)
+        already_exercise_completed = exercise_progress.completed if exercise_progress else False
+
+        # Жүрөкчө 0 болсо: жаңы exercise бөгөттөлөт,
+        # мурун аткарылган exercise (practice) жана админ үчүн бөгөттөлбөйт.
+        if hearts.hearts <= 0 and not already_exercise_completed and not is_admin:
             raise NotEnoughHeartsError(
                 self.gamification_repository.seconds_to_next_heart(hearts))
 
         correct = self._check_answer(exercise,data.answer)
         score = 10 if correct else 0
 
-        exercise_progress = await self.exercise_progress_repository.get_by_user_and_exercise(
-            user_id,exercise.id)
-        already_exercise_completed = exercise_progress.completed if exercise_progress else False
-
-        if not correct and not already_exercise_completed:
+        if not correct and not already_exercise_completed and not is_admin:
             hearts_left = await self.gamification_repository.lose_heart(user_id)
         else:
             hearts_left = hearts.hearts
@@ -150,7 +154,7 @@ class ExerciseService:
         if not streak:
             streak = await self.gamification_repository.create_streak(user_id)
 
-        today = date.today()
+        today = bishkek_date()
 
         if streak.last_activity == today:
             return
