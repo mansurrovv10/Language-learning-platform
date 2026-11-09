@@ -1,4 +1,6 @@
-from sqlalchemy import select
+import uuid
+
+from sqlalchemy import delete,select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import UserProfile,RefreshToken
 from backend.models.gamification import Hearts
@@ -15,6 +17,9 @@ class AuthRepository:
     async def get_user_by_username(self,username):
         result=await self.db.execute(select(UserProfile).where(UserProfile.username==username))
         return result.scalar_one_or_none()
+
+    async def get_user_by_id(self,user_id: uuid.UUID):
+        return await self.db.get(UserProfile,user_id)
 
     async def get_refresh_token(self,token):
         result=await self.db.execute(select(RefreshToken).where(RefreshToken.token==token))
@@ -37,3 +42,15 @@ class AuthRepository:
     async def delete_refresh_token(self,refresh_token):
         await self.db.delete(refresh_token)
         await self.db.commit()
+
+    async def delete_refresh_tokens_for_user(
+        self,user_id: uuid.UUID,commit: bool = True
+    ):
+        result = await self.db.execute(
+            delete(RefreshToken).where(RefreshToken.users_id == user_id)
+        )
+        if commit:
+            await self.db.commit()
+        else:
+            await self.db.flush()
+        return result.rowcount

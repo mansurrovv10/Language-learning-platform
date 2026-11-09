@@ -72,8 +72,11 @@ class UserRepository:
         await self.db.refresh(user)
         return user
 
-    async def set_active(self,user,is_active):
+    async def set_active(self,user,is_active,commit: bool = True):
         user.is_active=is_active
-        await self.db.commit()
-        await self.db.refresh(user)
+        if commit:
+            await self.db.commit()
+            await self.db.refresh(user)
+        else:
+            await self.db.flush()
         return user

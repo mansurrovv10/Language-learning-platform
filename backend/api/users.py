@@ -1,5 +1,6 @@
 import uuid
-from fastapi import APIRouter,Depends,HTTPException
+from pathlib import Path
+from fastapi import APIRouter,Depends,File,HTTPException,UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database.db import SessionLocal
 from backend.models.user import UserProfile
@@ -8,8 +9,7 @@ from backend.schemas.user_schema import UserUpdateSchema, RoleUpdateSchema, Acti
 from backend.schemas.public_schema import PublicUserSchema
 from backend.api.auth import get_current_user,require_admin
 from backend.services.user_ser import UserService
-import os
-from fastapi import APIRouter,Depends,HTTPException,UploadFile,File
+from backend.services.account_service import AccountService
 
 user_router=APIRouter(prefix="/users",tags=["Users"])
 
@@ -59,8 +59,8 @@ async def update_profile(data:UserUpdateSchema,current_user:UserProfile=Depends(
 
 @user_router.delete("/me")
 async def delete_profile(current_user:UserProfile=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
-    await UserService(db).delete_user(current_user)
-    return {"message":"User deleted successfully"}
+    await AccountService(db).deactivate(current_user.id)
+    return {"message":"User deactivated successfully"}
 
 
 @user_router.patch("/{user_id}/role",response_model=UserResponseSchema)
@@ -96,21 +96,16 @@ async def upload_avatar(file: UploadFile=File(...),
                         current_user:UserProfile=Depends(get_current_user),
                         db:AsyncSession=Depends(get_db)):
 
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400,detail="File must be an image")
-
-    os.makedirs("uploads/avatars",exist_ok=True)
-
-    file_extension=os.path.splitext(file.filename)[1]
-    file_name=f"{current_user.id}{file_extension}"
-    file_path=f"uploads/avatars/{file_name}"
-
-    with open(file_path,"wb") as buffer:
-        buffer.write(await file.read())
-
-    current_user.avatar=file_path
-
-    await db.commit()
-    await db.refresh(current_user)
+    try:
+        await AccountService(db).save_avatar(
+            current_user,file,Path("uploads/avatars")
+        )
+    except ValueError as error:
+        code = str(error)
+        status_code = 413 if code == "AVATAR_TOO_LARGE" else 400
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code":code,"message":code.replace("_"," ").title()},
+        )
 
     return current_user

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 from contextlib import asynccontextmanager,suppress
+from pathlib import Path
 import uvicorn
 from backend.logging_conf import setup_logging
 from backend.config import settings
@@ -44,6 +45,8 @@ async def lifespan(app: FastAPI):
 
 duolingo = FastAPI(title="Mini Duolingo",lifespan=lifespan)
 
+# uploads папкасы жок болсо сервер жыгылбасы үчүн
+Path("uploads").mkdir(parents=True,exist_ok=True)
 duolingo.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 duolingo.add_middleware(RateLimitMiddleware)

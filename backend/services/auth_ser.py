@@ -73,6 +73,8 @@ class AuthService:
 
         if not user or not self.verify_password(password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not user.is_active:
+            raise HTTPException(status_code=403,detail="User is inactive")
 
         access_token = self.create_access_token(user.id)
         refresh_token = self.create_refresh_token(user.id)
@@ -108,6 +110,14 @@ class AuthService:
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
+
+        try:
+            user = await self.repository.get_user_by_id(uuid.UUID(user_id))
+        except (TypeError,ValueError):
+            user = None
+        if not user or not user.is_active:
+            await self.repository.delete_refresh_token(refresh_token)
+            raise HTTPException(status_code=403,detail="User is inactive")
 
         await self.repository.delete_refresh_token(refresh_token)
 
