@@ -14,7 +14,7 @@ RATE_WINDOW = 60
 AUTH_RATE_LIMIT = 10
 AUTH_RATE_WINDOW = 60
 
-SKIP_PATHS = ("/docs", "/redoc", "/openapi.json", "/health")
+SKIP_PATHS = ("/docs", "/redoc", "/openapi.json", "/health", "/ready")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import asyncio
-from contextlib import asynccontextmanager,suppress
 from pathlib import Path
 import uvicorn
+from fastapi.responses import JSONResponse
 from backend.logging_conf import setup_logging
 from backend.config import settings
 from backend.middleware import LoggingMiddleware,RateLimitMiddleware
@@ -23,27 +22,14 @@ from backend.api.challange import router as challange_router
 from backend.api.leaderboard import router as leaderboard_router
 from backend.api.level_tests import router as level_tests_router
 from backend.api.learning_path import router as learning_path_router
-from backend.services.heart_refill import run_heart_refill_loop
+from backend.database.health import collect_readiness
 from fastapi.staticfiles import StaticFiles
 
 
 setup_logging()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    task = asyncio.create_task(run_heart_refill_loop())
-
-    try:
-        yield
-    finally:
-        task.cancel()
-
-        with suppress(asyncio.CancelledError):
-            await task
-
-
-duolingo = FastAPI(title="Mini Duolingo",lifespan=lifespan)
+duolingo = FastAPI(title="Mini Duolingo")
 
 # uploads папкасы жок болсо сервер жыгылбасы үчүн
 Path("uploads").mkdir(parents=True,exist_ok=True)
@@ -83,6 +69,18 @@ duolingo.include_router(learning_path_router)
 @duolingo.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@duolingo.get("/ready")
+async def ready():
+    is_ready,dependencies = await collect_readiness()
+    content = {
+        "status":"ready" if is_ready else "not ready",
+        "dependencies":dependencies,
+    }
+    if not is_ready:
+        return JSONResponse(status_code=503,content=content)
+    return content
 
 if __name__ == '__main__':
     uvicorn.run(duolingo, host=settings.HOST, port=settings.PORT)
