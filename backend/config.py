@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings,SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL:str
-    SECRET_KEY:str = Field(min_length=1)
+    SECRET_KEY:str = Field(min_length=32)
     REDIS_URL:str="redis://localhost:6379/0"
     ALLOWED_ORIGINS:str="http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,https://lingo-app.vercel.app"
     HOST:str="127.0.0.1"
@@ -26,8 +26,12 @@ class Settings(BaseSettings):
     @classmethod
     def secret_key_must_not_be_blank(cls,value: str):
         value = value.strip()
-        if not value:
-            raise ValueError("SECRET_KEY must not be blank")
+        if value.lower() in {
+            "change-me-in-production",
+            "changeme",
+            "secret",
+        }:
+            raise ValueError("SECRET_KEY must not use a known placeholder")
         return value
 
 settings=Settings()

@@ -66,6 +66,17 @@ def test_models_mark_every_instant_as_timezone_aware():
     ] == []
 
 
+def test_leaderboard_model_matches_unique_user_index():
+    leaderboard = Base.metadata.tables["leaderboard"]
+
+    assert any(
+        index.name == "ix_leaderboard_user_id"
+        and index.unique
+        and [column.name for column in index.columns] == ["user_id"]
+        for index in leaderboard.indexes
+    )
+
+
 @pytest.mark.parametrize(
     "constraint_name",
     [

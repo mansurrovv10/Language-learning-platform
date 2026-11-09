@@ -76,10 +76,11 @@ class AccountService:
 
             final_path = directory / f"{uuid.uuid4().hex}{verified_suffix}"
             os.replace(temporary,final_path)
-            user.avatar = str(final_path)
+            public_path = f"/uploads/avatars/{final_path.name}"
+            user.avatar = public_path
             await self.session.commit()
             await self.session.refresh(user)
-            return str(final_path)
+            return public_path
         except Exception:
             await self.session.rollback()
             temporary.unlink(missing_ok=True)

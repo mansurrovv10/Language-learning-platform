@@ -8,6 +8,7 @@ from backend.schemas.auth_schema import UserResponseSchema
 from backend.schemas.user_schema import UserUpdateSchema, RoleUpdateSchema, ActiveUpdateSchema
 from backend.schemas.public_schema import PublicUserSchema
 from backend.api.auth import get_current_user,require_admin
+from backend.api.chat_ws import manager
 from backend.services.user_ser import UserService
 from backend.services.account_service import AccountService
 
@@ -60,6 +61,7 @@ async def update_profile(data:UserUpdateSchema,current_user:UserProfile=Depends(
 @user_router.delete("/me")
 async def delete_profile(current_user:UserProfile=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
     await AccountService(db).deactivate(current_user.id)
+    await manager.disconnect_user(current_user.id)
     return {"message":"User deactivated successfully"}
 
 
@@ -73,6 +75,9 @@ async def change_role(user_id:uuid.UUID,data:RoleUpdateSchema,db:AsyncSession=De
 
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
+
+    if not data.is_active:
+        await manager.disconnect_user(user_id)
 
     return user
 

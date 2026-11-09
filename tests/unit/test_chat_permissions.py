@@ -13,9 +13,13 @@ from backend.services.chat_service import ChatService
 class FakeWebSocket:
     def __init__(self):
         self.accept_count = 0
+        self.close_codes = []
 
     async def accept(self):
         self.accept_count += 1
+
+    async def close(self,code=1000):
+        self.close_codes.append(code)
 
 
 class FakeChatRepository:
@@ -71,6 +75,22 @@ async def test_connection_manager_does_not_accept_twice():
     await manager.connect(uuid.uuid4(),websocket)
 
     assert websocket.accept_count == 0
+
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_connection_manager_revokes_all_user_sockets():
+    manager = ConnectionManager()
+    user_id = uuid.uuid4()
+    first = FakeWebSocket()
+    second = FakeWebSocket()
+    await manager.connect(user_id,first)
+    await manager.connect(user_id,second)
+
+    await manager.disconnect_user(user_id,code=4403)
+
+    assert first.close_codes == [4403]
+    assert second.close_codes == [4403]
+    assert user_id not in manager.active_connections
 
 
 @pytest.mark.parametrize("schema",[MessageCreate,MessageUpdate])

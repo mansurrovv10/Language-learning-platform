@@ -119,8 +119,41 @@ class ChatService:
     async def update_message(self,message_id: UUID,content: str):
         return await self.repository.update_message(message_id,content.strip())
 
+    async def update_message_authorized(
+        self,
+        chat_id: UUID,
+        message_id: UUID,
+        actor_id: UUID,
+        content: str,
+        is_admin: bool = False,
+    ):
+        message = await self.repository.get_message(message_id)
+        if message is None or message.chat_id != chat_id:
+            raise ValueError("MESSAGE_NOT_FOUND")
+        if not is_admin and await self.repository.get_member(chat_id,actor_id) is None:
+            raise PermissionError("CHAT_MEMBER_REQUIRED")
+        if not is_admin and message.sender_id != actor_id:
+            raise PermissionError("MESSAGE_OWNER_REQUIRED")
+        return await self.repository.update_message(message_id,content.strip())
+
     async def mark_message_as_read(self,message_id: UUID):
         return await self.repository.mark_message_as_read(message_id)
 
     async def delete_message(self,message_id: UUID):
+        return await self.repository.delete_message(message_id)
+
+    async def delete_message_authorized(
+        self,
+        chat_id: UUID,
+        message_id: UUID,
+        actor_id: UUID,
+        is_admin: bool = False,
+    ):
+        message = await self.repository.get_message(message_id)
+        if message is None or message.chat_id != chat_id:
+            raise ValueError("MESSAGE_NOT_FOUND")
+        if not is_admin and await self.repository.get_member(chat_id,actor_id) is None:
+            raise PermissionError("CHAT_MEMBER_REQUIRED")
+        if not is_admin and message.sender_id != actor_id:
+            raise PermissionError("MESSAGE_OWNER_REQUIRED")
         return await self.repository.delete_message(message_id)

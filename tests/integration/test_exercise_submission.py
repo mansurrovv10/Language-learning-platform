@@ -166,6 +166,15 @@ async def test_reusing_key_with_another_answer_is_a_conflict(db_session):
         )
 
 
+async def test_oversized_idempotency_key_is_rejected_before_database(db_session):
+    user,exercise = await seed_exercise(db_session)
+
+    with pytest.raises(ValueError,match="IDEMPOTENCY_KEY_TOO_LONG"):
+        await exercise_service(db_session).submit_exercise(
+            exercise.id,ExerciseSubmit(answer="hello"),user.id,"x" * 256
+        )
+
+
 async def test_submission_joins_transaction_started_by_api_reads(db_session):
     user,exercise = await seed_exercise(db_session)
     await db_session.execute(select(Exercise).where(Exercise.id == exercise.id))

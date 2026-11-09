@@ -29,6 +29,14 @@ class ConnectionManager:
         if not connections:
             self.active_connections.pop(user_id,None)
 
+    async def disconnect_user(self,user_id: UUID,code: int = 4403):
+        connections = self.active_connections.pop(user_id,set())
+        for websocket in list(connections):
+            try:
+                await websocket.close(code=code)
+            except Exception:
+                pass
+
     async def send_to_user(self,user_id:UUID,data:dict):
         connections=self.active_connections.get(user_id,set())
 

@@ -133,3 +133,13 @@ async def test_private_chat_membership_and_messages_are_enforced(db_session):
     assert message.content == "hello"
     assert message.created_at.tzinfo is not None
 
+    await service.remove_member(chat.id,creator.id)
+    with pytest.raises(PermissionError,match="CHAT_MEMBER_REQUIRED"):
+        await service.update_message_authorized(
+            chat.id,message.id,creator.id,"changed",is_admin=False
+        )
+    with pytest.raises(PermissionError,match="CHAT_MEMBER_REQUIRED"):
+        await service.delete_message_authorized(
+            chat.id,message.id,creator.id,is_admin=False
+        )
+

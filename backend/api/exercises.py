@@ -141,6 +141,11 @@ async def submit_exercise(
                 "code":"IDEMPOTENCY_KEY_REQUIRED",
                 "message":"Idempotency-Key header is required"
             })
+        if str(e) == "IDEMPOTENCY_KEY_TOO_LONG":
+            raise HTTPException(status_code=422,detail={
+                "code":"IDEMPOTENCY_KEY_TOO_LONG",
+                "message":"Idempotency-Key must be at most 255 characters"
+            })
         raise HTTPException(status_code=400,detail=str(e))
 
     if result is None:

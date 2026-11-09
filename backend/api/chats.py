@@ -236,7 +236,16 @@ async def update_message(chat_id: UUID,message_id: UUID,data: MessageUpdate,
     if message.sender_id != current_user.id:
         raise HTTPException(status_code=403,detail="You can only update your own messages")
 
-    message = await service.update_message(message_id,data.content)
+    try:
+        message = await service.update_message_authorized(
+            chat_id,
+            message_id,
+            current_user.id,
+            data.content,
+            current_user.role.value == "admin",
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403,detail=str(error))
 
     members = await service.get_members(chat_id)
 
@@ -294,7 +303,15 @@ async def delete_message(chat_id: UUID,message_id: UUID,
     if message.sender_id != current_user.id and current_user.role.value != "admin":
         raise HTTPException(status_code=403,detail="You can only delete your own messages")
 
-    await service.delete_message(message_id)
+    try:
+        await service.delete_message_authorized(
+            chat_id,
+            message_id,
+            current_user.id,
+            current_user.role.value == "admin",
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403,detail=str(error))
 
     members = await service.get_members(chat_id)
 

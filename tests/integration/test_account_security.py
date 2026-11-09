@@ -105,10 +105,11 @@ async def test_avatar_uses_verified_format_and_generated_name(db_session,tmp_pat
     stored = await AccountService(db_session).save_avatar(
         user,upload(original_name,png_bytes()),tmp_path
     )
-    stored_path = Path(stored)
+    stored_path = tmp_path / Path(stored).name
 
     assert stored_path.parent.resolve() == tmp_path.resolve()
     assert stored_path.suffix == ".png"
     assert stored_path.name != Path(original_name).name
     assert stored_path.exists()
-    assert user.avatar == str(stored_path)
+    assert stored == f"/uploads/avatars/{stored_path.name}"
+    assert user.avatar == stored

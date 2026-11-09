@@ -25,6 +25,9 @@ class NotEnoughHeartsError(Exception):
         self.seconds_to_next_heart = seconds_to_next_heart
 
 
+MAX_IDEMPOTENCY_KEY_LENGTH = 255
+
+
 class ExerciseService:
     ANSWER_ENVELOPE_KEYS = ("answer","value","correct_answer","correct","option",
                            "text","label","key","id","index")
@@ -101,6 +104,8 @@ class ExerciseService:
         if self.submission_repository is not None:
             if not idempotency_key or not idempotency_key.strip():
                 raise ValueError("IDEMPOTENCY_KEY_REQUIRED")
+            if len(idempotency_key.strip()) > MAX_IDEMPOTENCY_KEY_LENGTH:
+                raise ValueError("IDEMPOTENCY_KEY_TOO_LONG")
             return await self._submit_atomic(
                 exercise_id,data,user_id,idempotency_key.strip())
 
