@@ -28,12 +28,19 @@ def get_chat_service(
 @router.post("/", response_model=ChatResponse)
 async def create_chat(data: ChatCreate,current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)):
-    chat = await service.create_chat(data,current_user.id)
+    try:
+        chat = await service.create_private_chat(data,current_user.id)
+    except ValueError as error:
+        code = str(error)
+        status_code = 404 if code == "PARTICIPANT_NOT_FOUND" else 400
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code":code,"message":code.replace("_"," ").title()},
+        )
 
-    await service.add_member(chat_id=chat.id,user_id=current_user.id)
-
-    await manager.send_to_user(
-        current_user.id,
+    members = await service.get_members(chat.id)
+    await manager.send_to_users(
+        [item.user_id for item in members],
         {
             "type":"chat.updated",
             "chat_id":str(chat.id)
@@ -69,17 +76,19 @@ async def get_chat(chat_id: UUID,current_user: UserProfile = Depends(get_current
 async def add_member(chat_id: UUID,data: ChatMemberCreate,
     current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)):
-    user = await service.get_user_by_username(data.username)
-
-    if user is None:
-        raise HTTPException(status_code=404,detail="User not found")
-
-    existing_member = await service.get_member(chat_id,user.id)
-
-    if existing_member is not None:
-        raise HTTPException(status_code=400,detail="User is already a member")
-
-    member = await service.add_member(chat_id=chat_id,user_id=user.id)
+    try:
+        member = await service.add_member_authorized(
+            chat_id,
+            data.username,
+            current_user.id,
+            current_user.role.value == "admin",
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403,detail=str(error))
+    except ValueError as error:
+        code = str(error)
+        status_code = 404 if code in {"CHAT_NOT_FOUND","USER_NOT_FOUND"} else 400
+        raise HTTPException(status_code=status_code,detail=code)
 
     members = await service.get_members(chat_id)
 
@@ -114,25 +123,17 @@ async def get_members(chat_id: UUID,current_user: UserProfile = Depends(get_curr
 async def remove_member(chat_id: UUID,user_id: UUID,
     current_user: UserProfile = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service)):
-    chat = await service.get_chat(chat_id)
-
-    if chat is None:
-        raise HTTPException(status_code=404,detail="Chat not found")
-
-    member = await service.get_member(chat_id,user_id)
-
-    if member is None:
-        raise HTTPException(status_code=404,detail="Member not found")
-
-    current_member = await service.get_member(chat_id,current_user.id)
-
-    if current_member is None and current_user.role.value != "admin":
-        raise HTTPException(status_code=403,detail="Access denied")
-
-    if user_id != current_user.id and current_user.role.value != "admin":
-        raise HTTPException(status_code=403,detail="You can only remove yourself")
-
-    await service.remove_member(chat_id,user_id)
+    try:
+        await service.remove_member_authorized(
+            chat_id,
+            user_id,
+            current_user.id,
+            current_user.role.value == "admin",
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403,detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=404,detail=str(error))
 
     await manager.send_to_user(
         user_id,
@@ -198,7 +199,12 @@ async def get_messages(chat_id: UUID,current_user: UserProfile = Depends(get_cur
     if member is None and current_user.role.value != "admin":
         raise HTTPException(status_code=403,detail="Access denied")
 
-    return await service.get_messages(chat_id)
+    try:
+        return await service.get_messages_authorized(
+            chat_id,current_user.id,current_user.role.value == "admin"
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403,detail=str(error))
 
 
 @router.get("/{chat_id}/messages/{message_id}",response_model=MessageResponse)

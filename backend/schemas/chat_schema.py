@@ -1,15 +1,27 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel,ConfigDict
+from pydantic import BaseModel,ConfigDict,Field,field_validator,model_validator
 
 from backend.models.chat import ChatType
 from backend.schemas.public_schema import PublicUserSchema
 
 
 class ChatCreate(BaseModel):
-    type: ChatType
+    type: ChatType = ChatType.PRIVATE
     language_id: int | None = None
+    participant_username: str = Field(min_length=1,max_length=100)
+
+    @field_validator("participant_username",mode="before")
+    @classmethod
+    def strip_participant_username(cls,value):
+        return value.strip() if isinstance(value,str) else value
+
+    @model_validator(mode="after")
+    def private_only(self):
+        if self.type != ChatType.PRIVATE:
+            raise ValueError("GROUP_CHAT_DISABLED")
+        return self
 
 
 class ChatResponse(BaseModel):
@@ -35,11 +47,21 @@ class ChatMemberResponse(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    content: str
+    content: str = Field(min_length=1,max_length=2000)
+
+    @field_validator("content",mode="before")
+    @classmethod
+    def strip_content(cls,value):
+        return value.strip() if isinstance(value,str) else value
 
 
 class MessageUpdate(BaseModel):
-    content: str
+    content: str = Field(min_length=1,max_length=2000)
+
+    @field_validator("content",mode="before")
+    @classmethod
+    def strip_content(cls,value):
+        return value.strip() if isinstance(value,str) else value
 
 
 class MessageResponse(BaseModel):

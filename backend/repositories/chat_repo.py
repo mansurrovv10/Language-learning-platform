@@ -17,6 +17,23 @@ class ChatRepository:
         await self.session.refresh(chat)
         return chat
 
+    async def create_private_chat(
+        self,chat: Chat,user_ids: list[UUID]
+    ) -> Chat:
+        try:
+            self.session.add(chat)
+            await self.session.flush()
+            self.session.add_all([
+                ChatMember(chat_id=chat.id,user_id=user_id)
+                for user_id in user_ids
+            ])
+            await self.session.commit()
+            await self.session.refresh(chat)
+            return chat
+        except Exception:
+            await self.session.rollback()
+            raise
+
     async def get_by_id(self,chat_id: UUID):
         result = await self.session.execute(select(Chat).where(Chat.id == chat_id))
         return result.scalar_one_or_none()
@@ -70,7 +87,7 @@ class ChatRepository:
         result = await self.session.execute(
             select(Message)
             .where(Message.chat_id == chat_id)
-            .order_by(Message.created_at))
+            .order_by(Message.created_at,Message.id))
         return list(result.scalars().all())
 
     async def get_message(self,message_id: UUID) -> Message | None:
