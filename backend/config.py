@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     @field_validator("REDIS_URL",mode="before")
     @classmethod
     def blank_redis_disables_optional_integration(cls,value):
-        return value.strip() or None if isinstance(value,str) else value
+        if isinstance(value,str):
+            return value.strip() or None
+        return value
 
 settings=Settings()
 SECRET_KEY=settings.SECRET_KEY

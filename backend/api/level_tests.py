@@ -7,7 +7,7 @@ from backend.models.course import LevelChoices
 from backend.models.user import UserProfile
 from backend.repositories.level_test_repo import LevelTestRepository
 from backend.schemas.level_test_schema import (LevelTestCreate,LevelTestQuestionAdminResponse,
-    LevelTestQuestionCreate,LevelTestQuestionResponse,LevelTestQuestionUpdate,LevelTestResponse,
+    LevelTestQuestionCreate,LevelTestQuestionUpdate,LevelTestResponse,
     LevelTestResultResponse,LevelTestStartResponse,LevelTestSubmit,LevelTestUpdate)
 from backend.services.level_test_service import LevelTestService
 

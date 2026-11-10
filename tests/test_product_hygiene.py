@@ -97,6 +97,31 @@ def test_ci_targets_python_312_with_one_test_run_and_a_non_placeholder_secret():
     assert "change-me" not in secret.lower()
 
 
+def test_ci_uses_a_pinned_linter_and_repository_owned_rules():
+    """Keeps CI lint results stable and independent of developer machine config."""
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+    ruff_config = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert "ruff==0.16.7" in workflow
+    assert "[tool.ruff.lint]" in ruff_config
+    assert 'select = ["E4", "E7", "E9", "F"]' in ruff_config
+
+
+def test_readme_documents_optional_dependencies_and_new_frontend_contracts():
+    """Prevents release docs from describing Redis/OpenAI as core dependencies."""
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    for contract in (
+        "POST /practice/sessions",
+        "GET /daily-goal",
+        "GET /reviews/due",
+        "POST /ai/hint",
+        "Redis is optional",
+        "OpenAI is optional",
+    ):
+        assert contract in readme
+
+
 def test_course_response_uses_pydantic_v2_config():
     """Catches restoring the deprecated nested Pydantic Config class."""
     from backend.schemas.course_schema import CourseResponse
