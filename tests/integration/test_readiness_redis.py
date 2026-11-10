@@ -5,8 +5,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from backend.middleware import RATE_WINDOW,RateLimitMiddleware
-
+from backend.middleware import RATE_WINDOW, RateLimitMiddleware
 
 pytestmark = pytest.mark.integration
 
@@ -30,7 +29,27 @@ async def test_readiness_timeout_is_bounded():
 
     assert time.perf_counter() - started < 0.2
     assert ready is False
-    assert dependencies == {"postgres":"unavailable","redis":"ok"}
+    assert dependencies == {
+        "postgres":"unavailable","redis":"ok","openai":"disabled"}
+
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_redis_outage_is_reported_but_does_not_fail_readiness():
+    """Catches optional Redis incorrectly taking the core API out of service."""
+    from backend.database.health import collect_readiness
+
+    async def healthy():
+        return True
+
+    async def broken():
+        raise ConnectionError("redis unavailable")
+
+    ready,dependencies=await collect_readiness(
+        postgres_check=healthy,redis_check=broken,timeout_seconds=0.1)
+
+    assert ready is True
+    assert dependencies == {
+        "postgres":"ok","redis":"unavailable","openai":"disabled"}
 
 
 def rate_limited_app():

@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.auth import get_current_user
-from backend.api.chat_ws import manager
 from backend.database.db import SessionLocal
 from backend.models.user import UserProfile
 from backend.repositories.chat_repo import ChatRepository
@@ -18,6 +17,7 @@ from backend.schemas.chat_schema import (
     MessageUpdate,
 )
 from backend.schemas.page_schema import Page
+from backend.services.chat_event_broker import chat_event_broker
 from backend.services.chat_service import ChatService
 
 router = APIRouter(prefix="/chats",tags=["Chats"])
@@ -48,7 +48,7 @@ async def create_chat(data: ChatCreate,current_user: UserProfile = Depends(get_c
         )
 
     members = await service.get_members(chat.id)
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"chat.updated",
@@ -101,7 +101,7 @@ async def add_member(chat_id: UUID,data: ChatMemberCreate,
 
     members = await service.get_members(chat_id)
 
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"chat.updated",
@@ -144,8 +144,8 @@ async def remove_member(chat_id: UUID,user_id: UUID,
     except ValueError as error:
         raise HTTPException(status_code=404,detail=str(error))
 
-    await manager.send_to_user(
-        user_id,
+    await chat_event_broker.deliver_and_publish(
+        [user_id],
         {
             "type":"chat.access_revoked",
             "chat_id":str(chat_id)
@@ -154,7 +154,7 @@ async def remove_member(chat_id: UUID,user_id: UUID,
 
     members = await service.get_members(chat_id)
 
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"chat.updated",
@@ -183,7 +183,7 @@ async def create_message(chat_id: UUID,data: MessageCreate,
 
     members = await service.get_members(chat_id)
 
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"message.created",
@@ -277,7 +277,7 @@ async def update_message(chat_id: UUID,message_id: UUID,data: MessageUpdate,
 
     members = await service.get_members(chat_id)
 
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"message.updated",
@@ -307,7 +307,7 @@ async def mark_message_as_read(chat_id: UUID,message_id: UUID,
 
     members = await service.get_members(chat_id)
 
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"message.read",
@@ -343,7 +343,7 @@ async def delete_message(chat_id: UUID,message_id: UUID,
 
     members = await service.get_members(chat_id)
 
-    await manager.send_to_users(
+    await chat_event_broker.deliver_and_publish(
         [item.user_id for item in members],
         {
             "type":"message.deleted",

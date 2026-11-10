@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL:str
     SECRET_KEY:str = Field(min_length=32)
-    REDIS_URL:str="redis://localhost:6379/0"
+    REDIS_URL:str | None="redis://localhost:6379/0"
     ALLOWED_ORIGINS:str="http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,https://lingo-app.vercel.app"
     HOST:str="127.0.0.1"
     PORT:int=8001
@@ -38,6 +38,11 @@ class Settings(BaseSettings):
         }:
             raise ValueError("SECRET_KEY must not use a known placeholder")
         return value
+
+    @field_validator("REDIS_URL",mode="before")
+    @classmethod
+    def blank_redis_disables_optional_integration(cls,value):
+        return value.strip() or None if isinstance(value,str) else value
 
 settings=Settings()
 SECRET_KEY=settings.SECRET_KEY

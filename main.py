@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 import uvicorn
@@ -30,11 +32,27 @@ from backend.config import settings
 from backend.database.health import collect_readiness
 from backend.logging_conf import setup_logging
 from backend.middleware import LoggingMiddleware, RateLimitMiddleware
+from backend.services.chat_event_broker import chat_event_broker
 
 setup_logging()
 
 
-duolingo = FastAPI(title="Mini Duolingo")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    subscriber=(asyncio.create_task(chat_event_broker.run_forever())
+                if chat_event_broker.enabled else None)
+    if subscriber is not None:
+        await asyncio.sleep(0)
+    try:
+        yield
+    finally:
+        if subscriber is not None:
+            subscriber.cancel()
+            with suppress(asyncio.CancelledError):
+                await subscriber
+
+
+duolingo = FastAPI(title="Mini Duolingo",lifespan=lifespan)
 
 # uploads папкасы жок болсо сервер жыгылбасы үчүн
 Path("uploads").mkdir(parents=True,exist_ok=True)
