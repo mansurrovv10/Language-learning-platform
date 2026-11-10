@@ -1,8 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.language import Language
+from backend.pagination import normalize_page
 
 
 class LanguageRepository:
@@ -13,10 +14,25 @@ class LanguageRepository:
         query = select(Language)
 
         if not is_admin:
-            query = query.where(Language.is_active == True)
+            query = query.where(Language.is_active.is_(True))
 
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    async def get_paged(self, q=None, limit=20, offset=0, is_admin=False):
+        q, limit, offset = normalize_page(q, limit, offset)
+        filters = []
+        if not is_admin:
+            filters.append(Language.is_active.is_(True))
+        if q:
+            pattern = f"%{q}%"
+            filters.append(or_(Language.name.ilike(pattern), Language.code.ilike(pattern)))
+        total = int(await self.session.scalar(
+            select(func.count()).select_from(Language).where(*filters)) or 0)
+        items = list(await self.session.scalars(
+            select(Language).where(*filters).order_by(Language.name, Language.id)
+            .limit(limit).offset(offset)))
+        return items, total
 
     async def get_by_id(self, language_id: int):
         result = await self.session.execute(

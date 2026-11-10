@@ -1,10 +1,12 @@
-from sqlalchemy import select, delete
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.models.user import UserProfile
-from backend.models.social import FriendRequest, Friendship
-from backend.models.progress import UserProgress
+
 from backend.models.exercise_progress import UserExerciseProgress
 from backend.models.gamification import Hearts
+from backend.models.progress import UserProgress
+from backend.models.social import FriendRequest, Friendship
+from backend.models.user import UserProfile
+from backend.pagination import normalize_page
 
 
 class UserRepository:
@@ -33,6 +35,19 @@ class UserRepository:
     async def get_all(self):
         result=await self.db.execute(select(UserProfile))
         return result.scalars().all()
+
+    async def get_paged(self,q=None,limit=20,offset=0):
+        q,limit,offset=normalize_page(q,limit,offset)
+        filters=[]
+        if q:
+            pattern=f"%{q}%"
+            filters.append(or_(UserProfile.username.ilike(pattern),UserProfile.email.ilike(pattern)))
+        total=int(await self.db.scalar(
+            select(func.count()).select_from(UserProfile).where(*filters)) or 0)
+        items=list(await self.db.scalars(
+            select(UserProfile).where(*filters).order_by(UserProfile.username,UserProfile.id)
+            .limit(limit).offset(offset)))
+        return items,total
 
     async def create(self,user):
         self.db.add(user)

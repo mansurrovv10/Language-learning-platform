@@ -60,6 +60,9 @@ class ExerciseService:
     async def get_all(self):
         return await self.repository.get_all()
 
+    async def get_paged(self, q=None, limit=20, offset=0):
+        return await self.repository.get_paged(q, limit, offset)
+
     async def get_by_id(self,exercise_id: int):
         return await self.repository.get_by_id(exercise_id)
 

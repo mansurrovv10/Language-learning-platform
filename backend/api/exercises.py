@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.auth import get_current_user, require_admin
@@ -22,6 +22,7 @@ from backend.schemas.exercise_schema import (
     ExerciseSubmit,
     ExerciseUpdate,
 )
+from backend.schemas.page_schema import Page
 from backend.services.exercise_service import ExerciseService, NotEnoughHeartsError
 from backend.services.learning_path_service import LearningPathService
 from backend.services.review_service import ReviewService
@@ -50,6 +51,17 @@ def get_learning_path_service(session: AsyncSession = Depends(get_session)):
 async def get_exercises(service: ExerciseService = Depends(get_exercise_service),
     current_user: UserProfile = Depends(require_admin)):
     return await service.get_all()
+
+
+@router.get("/paged",response_model=Page[ExerciseResponse])
+async def get_exercises_paged(
+    q: str | None = Query(default=None,max_length=100),
+    limit: int = Query(default=20,ge=1,le=100),
+    offset: int = Query(default=0,ge=0),
+    service: ExerciseService = Depends(get_exercise_service),
+    current_user: UserProfile = Depends(require_admin)):
+    items,total = await service.get_paged(q,limit,offset)
+    return Page(items=items,total=total,limit=limit,offset=offset)
 
 
 @router.get("/lesson/{lesson_id}",response_model=list[ExerciseResponse])

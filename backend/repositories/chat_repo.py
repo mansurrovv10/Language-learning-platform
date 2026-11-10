@@ -1,9 +1,12 @@
 from uuid import UUID
-from sqlalchemy import delete,select
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.models.chat import Chat,ChatMember
+
+from backend.models.chat import Chat, ChatMember
 from backend.models.message import Message
 from backend.models.user import UserProfile
+from backend.pagination import normalize_page
 
 
 class ChatRepository:
@@ -89,6 +92,18 @@ class ChatRepository:
             .where(Message.chat_id == chat_id)
             .order_by(Message.created_at,Message.id))
         return list(result.scalars().all())
+
+    async def get_messages_paged(self,chat_id: UUID,q=None,limit=20,offset=0):
+        q,limit,offset=normalize_page(q,limit,offset)
+        filters=[Message.chat_id == chat_id]
+        if q:
+            filters.append(Message.content.ilike(f"%{q}%"))
+        total=int(await self.session.scalar(
+            select(func.count()).select_from(Message).where(*filters)) or 0)
+        items=list(await self.session.scalars(
+            select(Message).where(*filters).order_by(Message.created_at,Message.id)
+            .limit(limit).offset(offset)))
+        return items,total
 
     async def get_message(self,message_id: UUID) -> Message | None:
         result = await self.session.execute(

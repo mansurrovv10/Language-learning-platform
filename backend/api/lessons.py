@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database.db import get_session
-from backend.repositories.lessons_repo import LessonRepository
-from backend.schemas.lessons_schema import LessonCreate, LessonUpdate, LessonResponse
-from backend.services.lessons_service import LessonService
 from backend.api.auth import get_current_user, require_admin
+from backend.database.db import get_session
 from backend.models.user import UserProfile
 from backend.repositories.learning_path_repo import LearningPathRepository
+from backend.repositories.lessons_repo import LessonRepository
+from backend.schemas.lessons_schema import LessonCreate, LessonResponse, LessonUpdate
+from backend.schemas.page_schema import Page
 from backend.services.learning_path_service import LearningPathService
-
+from backend.services.lessons_service import LessonService
 
 router = APIRouter(prefix="/lessons", tags=["Lessons"])
 
@@ -28,6 +28,17 @@ async def get_lessons(
     service: LessonService = Depends(get_lesson_service),
     current_user: UserProfile = Depends(require_admin)):
     return await service.get_all()
+
+
+@router.get("/paged", response_model=Page[LessonResponse])
+async def get_lessons_paged(
+    q: str | None = Query(default=None,max_length=100),
+    limit: int = Query(default=20,ge=1,le=100),
+    offset: int = Query(default=0,ge=0),
+    service: LessonService = Depends(get_lesson_service),
+    current_user: UserProfile = Depends(require_admin)):
+    items,total = await service.get_paged(q,limit,offset)
+    return Page(items=items,total=total,limit=limit,offset=offset)
 
 
 @router.get("/course/{course_id}", response_model=list[LessonResponse])

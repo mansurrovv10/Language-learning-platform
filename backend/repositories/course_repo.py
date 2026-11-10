@@ -1,11 +1,12 @@
-from sqlalchemy import select, delete
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.course import Course
-from backend.models.lesson import Lesson
 from backend.models.exercise import Exercise
-from backend.models.progress import UserProgress
 from backend.models.exercise_progress import UserExerciseProgress
+from backend.models.lesson import Lesson
+from backend.models.progress import UserProgress
+from backend.pagination import normalize_page
 
 
 class CourseRepository:
@@ -15,6 +16,20 @@ class CourseRepository:
     async def get_all(self):
         result = await self.session.execute(select(Course).order_by(Course.order))
         return result.scalars().all()
+
+    async def get_paged(self, q=None, limit=20, offset=0):
+        q, limit, offset = normalize_page(q, limit, offset)
+        filters = []
+        if q:
+            pattern = f"%{q}%"
+            filters.append(or_(Course.title.ilike(pattern), Course.description.ilike(pattern)))
+        total = int(await self.session.scalar(
+            select(func.count()).select_from(Course).where(*filters)) or 0)
+        items = list(await self.session.scalars(
+            select(Course).where(*filters)
+            .order_by(Course.language_id, Course.order, Course.id)
+            .limit(limit).offset(offset)))
+        return items, total
 
     async def get_by_id(self, course_id: int):
         result = await self.session.execute(select(Course).where(Course.id == course_id))
