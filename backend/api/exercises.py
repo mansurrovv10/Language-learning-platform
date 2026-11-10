@@ -1,21 +1,30 @@
-from fastapi import APIRouter,Depends,Header,HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.repositories.achievement_repo import AchievementRepository
-from backend.database.db import get_session
-from backend.repositories.exercise_repo import ExerciseRepository
-from backend.repositories.progress_repo import ProgressRepository
-from backend.repositories.gamification_repo import GamificationRepository
-from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
-from backend.repositories.exercise_submission_repo import (
-    ExerciseSubmissionRepository,IdempotencyConflictError)
-from backend.schemas.exercise_schema import (ExerciseCreate,ExerciseUpdate,ExerciseResponse,
-                                             ExerciseSubmit,ExerciseResult)
-from backend.services.exercise_service import ExerciseService,NotEnoughHeartsError
-from backend.api.auth import get_current_user,require_admin
-from backend.models.user import UserProfile
-from backend.repositories.learning_path_repo import LearningPathRepository
-from backend.services.learning_path_service import LearningPathService
 
+from backend.api.auth import get_current_user, require_admin
+from backend.database.db import get_session
+from backend.models.user import UserProfile
+from backend.repositories.achievement_repo import AchievementRepository
+from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
+from backend.repositories.exercise_repo import ExerciseRepository
+from backend.repositories.exercise_submission_repo import (
+    ExerciseSubmissionRepository,
+    IdempotencyConflictError,
+)
+from backend.repositories.gamification_repo import GamificationRepository
+from backend.repositories.learning_path_repo import LearningPathRepository
+from backend.repositories.progress_repo import ProgressRepository
+from backend.repositories.review_repo import ReviewRepository
+from backend.schemas.exercise_schema import (
+    ExerciseCreate,
+    ExerciseResponse,
+    ExerciseResult,
+    ExerciseSubmit,
+    ExerciseUpdate,
+)
+from backend.services.exercise_service import ExerciseService, NotEnoughHeartsError
+from backend.services.learning_path_service import LearningPathService
+from backend.services.review_service import ReviewService
 
 router = APIRouter(prefix="/exercises",tags=["Exercises"])
 
@@ -29,7 +38,8 @@ def get_exercise_service(session: AsyncSession = Depends(get_session)):
     submission_repository = ExerciseSubmissionRepository(session)
 
     return ExerciseService(exercise_repository,progress_repository,exercise_progress_repository,
-        gamification_repository,achievement_repository,submission_repository)
+        gamification_repository,achievement_repository,submission_repository,
+        ReviewService(ReviewRepository(session)))
 
 
 def get_learning_path_service(session: AsyncSession = Depends(get_session)):

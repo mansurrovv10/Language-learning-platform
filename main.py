@@ -22,6 +22,7 @@ from backend.api.learning_path import router as learning_path_router
 from backend.api.lessons import router as lessons_router
 from backend.api.level_tests import router as level_tests_router
 from backend.api.progress import router as progress_router
+from backend.api.reviews import router as reviews_router
 from backend.api.users import user_router
 from backend.config import settings
 from backend.database.health import collect_readiness
@@ -67,6 +68,7 @@ duolingo.include_router(leaderboard_router)
 duolingo.include_router(level_tests_router)
 duolingo.include_router(learning_path_router)
 duolingo.include_router(daily_goals_router)
+duolingo.include_router(reviews_router)
 
 
 @duolingo.get("/health")
