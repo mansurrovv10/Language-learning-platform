@@ -15,6 +15,10 @@ from backend.models.level_test import LevelTest, LevelTestQuestion, LevelTestAtt
 from backend.models.user_language import UserLanguage
 from backend.models.exercise_progress import UserExerciseProgress
 from backend.models.exercise_submission import ExerciseSubmission
+from backend.models.review_item import ReviewItem
+from backend.models.practice import PracticeSession, PracticeSessionItem
+from backend.models.daily_goal import UserDailyGoal
+from backend.models.ai_usage import AIUsage
 
 
 __all__ = [
@@ -42,4 +46,9 @@ __all__ = [
     "UserLanguage",
     "UserExerciseProgress",
     "ExerciseSubmission",
+    "ReviewItem",
+    "PracticeSession",
+    "PracticeSessionItem",
+    "UserDailyGoal",
+    "AIUsage",
 ]

@@ -12,7 +12,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379/0
-      SECRET_KEY: ci-only-secret-key
+      SECRET_KEY: ci-only-secret-key-not-for-production-2026
 
     services:
       postgres:
@@ -61,7 +61,4 @@ jobs:
         run: alembic upgrade head
 
       - name: Run tests
-        run: pytest
-
-      - name: Run tests
-        run: pytest
+        run: python -m pytest

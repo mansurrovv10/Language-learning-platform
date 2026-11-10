@@ -76,9 +76,6 @@ async def change_role(user_id:uuid.UUID,data:RoleUpdateSchema,db:AsyncSession=De
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
 
-    if not data.is_active:
-        await manager.disconnect_user(user_id)
-
     return user
 
 
@@ -92,6 +89,9 @@ async def set_active(user_id:uuid.UUID,data:ActiveUpdateSchema,
 
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
+
+    if not data.is_active:
+        await manager.disconnect_user(user_id)
 
     return user
 

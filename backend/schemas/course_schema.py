@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from backend.models.course import LevelChoices
 
@@ -22,12 +22,11 @@ class CourseUpdate(BaseModel):
 
 
 class CourseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     language_id: int
     title: str
     description: str
     level: LevelChoices
     order: int
-
-    class Config:
-        from_attributes = True
