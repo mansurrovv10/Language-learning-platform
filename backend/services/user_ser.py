@@ -1,5 +1,6 @@
-from backend.services.auth_ser import pwd_context
 from backend.repositories.user_repo import UserRepository
+from backend.services.auth_ser import pwd_context
+
 
 class UserService:
     def __init__(self,db):
@@ -10,6 +11,9 @@ class UserService:
 
     async def get_users(self):
         return await self.repository.get_all()
+
+    async def get_paged(self,q=None,limit=20,offset=0):
+        return await self.repository.get_paged(q,limit,offset)
 
     async def search_users(self,query,limit=10):
         return await self.repository.search(query,limit)

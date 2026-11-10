@@ -8,6 +8,9 @@ class LanguageService:
     async def get_all(self, is_admin: bool = False):
         return await self.repository.get_all(is_admin)
 
+    async def get_paged(self, q=None, limit=20, offset=0, is_admin=False):
+        return await self.repository.get_paged(q, limit, offset, is_admin)
+
     async def get_by_id(self, language_id: int):
         return await self.repository.get_by_id(language_id)
 

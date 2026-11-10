@@ -11,8 +11,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
-      REDIS_URL: redis://localhost:6379/0
-      SECRET_KEY: ci-only-secret-key
+      REDIS_URL: redis://127.0.0.1:6379/0
+      SECRET_KEY: ci-only-secret-key-not-for-production-2026
 
     services:
       postgres:
@@ -52,7 +52,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r req.txt
-          pip install ruff
+          pip install ruff==0.16.7
 
       - name: Lint (ruff)
         run: ruff check .
@@ -61,7 +61,4 @@ jobs:
         run: alembic upgrade head
 
       - name: Run tests
-        run: pytest
-
-      - name: Run tests
-        run: pytest
+        run: python -m pytest

@@ -245,7 +245,12 @@ def upgrade() -> None:
         "user_exercise_progress",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.UUID(), sa.ForeignKey("user.id"), nullable=False),
-        sa.Column("exercise_id", sa.Integer(), sa.ForeignKey("exercise.id"), nullable=False),
+        sa.Column(
+            "exercise_id",
+            sa.Integer(),
+            sa.ForeignKey("exercise.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("completed", sa.Boolean(), nullable=False),
         sa.Column("score", sa.Integer(), nullable=False),
         sa.UniqueConstraint(
@@ -256,7 +261,12 @@ def upgrade() -> None:
         "exercise_submission",
         sa.Column("id", sa.UUID(), primary_key=True),
         sa.Column("user_id", sa.UUID(), sa.ForeignKey("user.id"), nullable=False),
-        sa.Column("exercise_id", sa.Integer(), sa.ForeignKey("exercise.id"), nullable=False),
+        sa.Column(
+            "exercise_id",
+            sa.Integer(),
+            sa.ForeignKey("exercise.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("idempotency_key", sa.String(255), nullable=False),
         sa.Column("request_hash", sa.String(64), nullable=False),
         sa.Column("response", sa.JSON(), nullable=True),

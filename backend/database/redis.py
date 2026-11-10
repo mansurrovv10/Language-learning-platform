@@ -1,4 +1,6 @@
 from redis.asyncio import Redis
+
 from backend.config import settings
 
-redis_client=Redis.from_url(settings.REDIS_URL,decode_responses=True)
+redis_client=(Redis.from_url(settings.REDIS_URL,decode_responses=True)
+              if settings.REDIS_URL else None)

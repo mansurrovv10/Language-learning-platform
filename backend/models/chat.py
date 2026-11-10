@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey,Integer,DateTime,Enum
 from sqlalchemy.dialects.postgresql import UUID
@@ -8,6 +9,9 @@ from sqlalchemy.orm import Mapped,mapped_column,relationship
 
 from backend.database.base import Base
 from backend.time import utc_now
+
+if TYPE_CHECKING:
+    from backend.models.user import UserProfile
 
 
 class ChatType(str,PyEnum):

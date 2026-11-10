@@ -1,11 +1,11 @@
 import asyncio
-from collections.abc import Awaitable,Callable
+from collections.abc import Awaitable, Callable
 
 from sqlalchemy import text
 
+from backend.config import settings
 from backend.database.db import engine
 from backend.database.redis import redis_client
-
 
 HealthCheck = Callable[[],Awaitable[object]]
 
@@ -17,6 +17,8 @@ async def check_postgres():
 
 
 async def check_redis():
+    if redis_client is None:
+        return "disabled"
     return await redis_client.ping()
 
 
@@ -34,10 +36,14 @@ async def collect_readiness(
     timeout_seconds: float = 1.0,
 ) -> tuple[bool,dict[str,str]]:
     postgres_check = postgres_check or check_postgres
-    redis_check = redis_check or check_redis
-    postgres,redis = await asyncio.gather(
-        _bounded_status(postgres_check,timeout_seconds),
-        _bounded_status(redis_check,timeout_seconds),
-    )
-    dependencies = {"postgres":postgres,"redis":redis}
-    return all(value == "ok" for value in dependencies.values()),dependencies
+    postgres_task=_bounded_status(postgres_check,timeout_seconds)
+    if redis_check is None and redis_client is None:
+        postgres=await postgres_task
+        redis="disabled"
+    else:
+        postgres,redis=await asyncio.gather(
+            postgres_task,
+            _bounded_status(redis_check or check_redis,timeout_seconds))
+    dependencies={"postgres":postgres,"redis":redis,
+                  "openai":"configured" if settings.OPENAI_API_KEY else "disabled"}
+    return postgres == "ok",dependencies

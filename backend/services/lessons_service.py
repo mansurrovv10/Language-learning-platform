@@ -8,6 +8,9 @@ class LessonService:
     async def get_all(self):
         return await self.repository.get_all()
 
+    async def get_paged(self, q=None, limit=20, offset=0):
+        return await self.repository.get_paged(q, limit, offset)
+
     async def get_by_id(self, lesson_id: int):
         return await self.repository.get_by_id(lesson_id)
 

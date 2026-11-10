@@ -43,5 +43,5 @@ class ExerciseProgressRepository:
         result = await self.session.execute(select(UserExerciseProgress.exercise_id).where(
             UserExerciseProgress.user_id == user_id,
             UserExerciseProgress.exercise_id.in_(exercise_ids),
-            UserExerciseProgress.completed == True))
+            UserExerciseProgress.completed.is_(True)))
         return set(exercise_ids).issubset(set(result.scalars().all()))

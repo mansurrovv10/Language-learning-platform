@@ -27,7 +27,7 @@ def _offline_upgrade_sql() -> str:
 def test_migration_history_has_one_head():
     script = ScriptDirectory.from_config(Config("alembic.ini"))
 
-    assert script.get_heads() == ["core_baseline"]
+    assert script.get_heads() == ["product_completion"]
 
 
 def test_baseline_creates_each_table_once():

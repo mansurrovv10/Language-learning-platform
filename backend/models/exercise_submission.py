@@ -26,7 +26,7 @@ class ExerciseSubmission(Base):
         UUID(as_uuid=True), ForeignKey("user.id"), nullable=False, index=True
     )
     exercise_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("exercise.id"), nullable=False, index=True
+        Integer, ForeignKey("exercise.id",ondelete="CASCADE"), nullable=False, index=True
     )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)

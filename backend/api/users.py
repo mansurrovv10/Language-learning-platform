@@ -1,16 +1,24 @@
 import uuid
 from pathlib import Path
-from fastapi import APIRouter,Depends,File,HTTPException,UploadFile
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.api.auth import get_current_user, require_admin
+from backend.api.chat_ws import manager  # noqa: F401 - stable test/extension surface
 from backend.database.db import SessionLocal
 from backend.models.user import UserProfile
 from backend.schemas.auth_schema import UserResponseSchema
-from backend.schemas.user_schema import UserUpdateSchema, RoleUpdateSchema, ActiveUpdateSchema
+from backend.schemas.page_schema import Page
 from backend.schemas.public_schema import PublicUserSchema
-from backend.api.auth import get_current_user,require_admin
-from backend.api.chat_ws import manager
-from backend.services.user_ser import UserService
+from backend.schemas.user_schema import (
+    ActiveUpdateSchema,
+    RoleUpdateSchema,
+    UserUpdateSchema,
+)
 from backend.services.account_service import AccountService
+from backend.services.chat_event_broker import chat_event_broker
+from backend.services.user_ser import UserService
 
 user_router=APIRouter(prefix="/users",tags=["Users"])
 
@@ -25,6 +33,17 @@ async def user_me(current_user:UserProfile=Depends(get_current_user)):
 @user_router.get("/",response_model=list[UserResponseSchema])
 async def user_list(db:AsyncSession=Depends(get_db),current_user:UserProfile=Depends(require_admin)):
     return await UserService(db).get_users()
+
+
+@user_router.get("/paged",response_model=Page[UserResponseSchema])
+async def user_list_paged(
+    q: str | None = Query(default=None,max_length=100),
+    limit: int = Query(default=20,ge=1,le=100),
+    offset: int = Query(default=0,ge=0),
+    db:AsyncSession=Depends(get_db),
+    current_user:UserProfile=Depends(require_admin)):
+    items,total = await UserService(db).get_paged(q,limit,offset)
+    return Page(items=items,total=total,limit=limit,offset=offset)
 
 @user_router.get("/search",response_model=list[PublicUserSchema])
 async def search_users(q: str,db: AsyncSession = Depends(get_db),
@@ -61,7 +80,7 @@ async def update_profile(data:UserUpdateSchema,current_user:UserProfile=Depends(
 @user_router.delete("/me")
 async def delete_profile(current_user:UserProfile=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
     await AccountService(db).deactivate(current_user.id)
-    await manager.disconnect_user(current_user.id)
+    await chat_event_broker.revoke_user(current_user.id)
     return {"message":"User deactivated successfully"}
 
 
@@ -76,9 +95,6 @@ async def change_role(user_id:uuid.UUID,data:RoleUpdateSchema,db:AsyncSession=De
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
 
-    if not data.is_active:
-        await manager.disconnect_user(user_id)
-
     return user
 
 
@@ -92,6 +108,9 @@ async def set_active(user_id:uuid.UUID,data:ActiveUpdateSchema,
 
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
+
+    if not data.is_active:
+        await chat_event_broker.revoke_user(user_id)
 
     return user
 

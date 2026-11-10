@@ -1,8 +1,9 @@
 from uuid import UUID
-from backend.models.chat import Chat,ChatMember,ChatType
+
+from backend.models.chat import Chat, ChatMember, ChatType
 from backend.models.message import Message
 from backend.repositories.chat_repo import ChatRepository
-from backend.schemas.chat_schema import ChatCreate,MessageCreate
+from backend.schemas.chat_schema import ChatCreate, MessageCreate
 
 
 class ChatService:
@@ -112,6 +113,12 @@ class ChatService:
         if not is_admin and await self.repository.get_member(chat_id,user_id) is None:
             raise PermissionError("CHAT_MEMBER_REQUIRED")
         return await self.repository.get_messages(chat_id)
+
+    async def get_messages_paged_authorized(
+        self,chat_id,user_id,q=None,limit=20,offset=0,is_admin=False):
+        if not is_admin and not await self.repository.get_member(chat_id,user_id):
+            raise PermissionError("CHAT_MEMBER_REQUIRED")
+        return await self.repository.get_messages_paged(chat_id,q,limit,offset)
 
     async def get_message(self,message_id: UUID):
         return await self.repository.get_message(message_id)

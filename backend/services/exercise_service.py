@@ -1,22 +1,28 @@
+import hashlib
+import json
 import re
 import unicodedata
 import uuid
-import hashlib
-import json
 
-from backend.models.exercise import Exercise,ExerciseType
-from backend.repositories.exercise_repo import ExerciseRepository
-from backend.repositories.progress_repo import ProgressRepository
-from backend.repositories.gamification_repo import GamificationRepository
+from backend.config import MAX_HEARTS
+from backend.models.exercise import Exercise, ExerciseType
 from backend.repositories.achievement_repo import AchievementRepository
 from backend.repositories.exercise_progress_repo import ExerciseProgressRepository
+from backend.repositories.exercise_repo import ExerciseRepository
 from backend.repositories.exercise_submission_repo import ExerciseSubmissionRepository
-from backend.schemas.exercise_schema import ExerciseCreate,ExerciseUpdate,ExerciseResult,ExerciseSubmit
+from backend.repositories.gamification_repo import GamificationRepository
+from backend.repositories.progress_repo import ProgressRepository
+from backend.schemas.exercise_schema import (
+    ExerciseCreate,
+    ExerciseResult,
+    ExerciseSubmit,
+    ExerciseUpdate,
+)
 from backend.schemas.gamification_schema import HeartsResponse
 from backend.services.achievement_service import AchievementService
 from backend.services.gamification_service import GamificationService
+from backend.services.review_service import ReviewService
 from backend.time import utc_now
-from backend.config import MAX_HEARTS
 
 
 class NotEnoughHeartsError(Exception):
@@ -39,18 +45,23 @@ class ExerciseService:
         exercise_progress_repository: ExerciseProgressRepository,
         gamification_repository: GamificationRepository,
         achievement_repository: AchievementRepository,
-        submission_repository: ExerciseSubmissionRepository | None = None):
+        submission_repository: ExerciseSubmissionRepository | None = None,
+        review_service: ReviewService | None = None):
         self.repository = repository
         self.progress_repository = progress_repository
         self.exercise_progress_repository = exercise_progress_repository
         self.gamification_repository = gamification_repository
         self.submission_repository = submission_repository
+        self.review_service = review_service
         self.achievement_service = AchievementService(
             achievement_repository,
             gamification_repository)
 
     async def get_all(self):
         return await self.repository.get_all()
+
+    async def get_paged(self, q=None, limit=20, offset=0):
+        return await self.repository.get_paged(q, limit, offset)
 
     async def get_by_id(self,exercise_id: int):
         return await self.repository.get_by_id(exercise_id)
@@ -207,6 +218,10 @@ class ExerciseService:
 
             correct = self._check_answer(exercise,data.answer)
             score = 10 if correct else 0
+            if self.review_service is not None:
+                await self.review_service.record_result(
+                    user_id, exercise.id, correct, at=utc_now(), commit=False
+                )
             if not correct and not already_completed:
                 hearts_left = await self.gamification_repository.lose_heart(
                     user_id,commit=False)

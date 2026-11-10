@@ -30,7 +30,7 @@ class LevelTestRepository:
         query = select(LevelTest).where(
             LevelTest.language_id == language_id,
             LevelTest.is_placement == is_placement,
-            LevelTest.is_active == True)
+            LevelTest.is_active.is_(True))
         if target_level is not None:
             query = query.where(LevelTest.target_level == target_level)
         result = await self.session.execute(query.order_by(LevelTest.created_at.desc()))
@@ -122,6 +122,6 @@ class LevelTestRepository:
         result = await self.session.execute(select(UserProgress.lesson_id).where(
             UserProgress.user_id == user_id,
             UserProgress.lesson_id.in_(lesson_ids),
-            UserProgress.completed == True))
+            UserProgress.completed.is_(True)))
         completed_ids = set(result.scalars().all())
         return set(lesson_ids).issubset(completed_ids)
