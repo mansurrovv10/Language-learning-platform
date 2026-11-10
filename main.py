@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.api.achievement import router as achievement_router
+from backend.api.ai import router as ai_router
 from backend.api.auth import auth_router
 from backend.api.challange import router as challange_router
 from backend.api.chat_ws import websocket_router
@@ -71,6 +72,7 @@ duolingo.include_router(learning_path_router)
 duolingo.include_router(daily_goals_router)
 duolingo.include_router(reviews_router)
 duolingo.include_router(practice_router)
+duolingo.include_router(ai_router)
 
 
 @duolingo.get("/health")

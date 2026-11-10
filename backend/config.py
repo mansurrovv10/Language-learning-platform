@@ -1,5 +1,6 @@
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings,SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     DATABASE_URL:str
@@ -11,6 +12,10 @@ class Settings(BaseSettings):
     MAX_HEARTS:int=5
     HEART_REGEN_MINUTES:int=30
     HEART_REFILL_INTERVAL_SECONDS:int=30
+    OPENAI_API_KEY:str | None=None
+    OPENAI_MODEL:str="gpt-6-luna"
+    AI_DAILY_QUOTA:int=20
+    AI_TIMEOUT_SECONDS:float=15.0
 
     model_config=SettingsConfigDict(
         env_file=".env",
