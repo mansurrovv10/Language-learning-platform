@@ -6,7 +6,7 @@ from backend.models.exercise import Exercise
 from backend.models.exercise_progress import UserExerciseProgress
 from backend.models.lesson import Lesson
 from backend.models.progress import UserProgress
-from backend.pagination import normalize_page
+from backend.pagination import literal_search_pattern, normalize_page
 
 
 class CourseRepository:
@@ -21,8 +21,11 @@ class CourseRepository:
         q, limit, offset = normalize_page(q, limit, offset)
         filters = []
         if q:
-            pattern = f"%{q}%"
-            filters.append(or_(Course.title.ilike(pattern), Course.description.ilike(pattern)))
+            pattern = literal_search_pattern(q)
+            filters.append(or_(
+                Course.title.ilike(pattern,escape="\\"),
+                Course.description.ilike(pattern,escape="\\"),
+            ))
         total = int(await self.session.scalar(
             select(func.count()).select_from(Course).where(*filters)) or 0)
         items = list(await self.session.scalars(

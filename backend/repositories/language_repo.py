@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.language import Language
-from backend.pagination import normalize_page
+from backend.pagination import literal_search_pattern, normalize_page
 
 
 class LanguageRepository:
@@ -25,8 +25,11 @@ class LanguageRepository:
         if not is_admin:
             filters.append(Language.is_active.is_(True))
         if q:
-            pattern = f"%{q}%"
-            filters.append(or_(Language.name.ilike(pattern), Language.code.ilike(pattern)))
+            pattern = literal_search_pattern(q)
+            filters.append(or_(
+                Language.name.ilike(pattern,escape="\\"),
+                Language.code.ilike(pattern,escape="\\"),
+            ))
         total = int(await self.session.scalar(
             select(func.count()).select_from(Language).where(*filters)) or 0)
         items = list(await self.session.scalars(

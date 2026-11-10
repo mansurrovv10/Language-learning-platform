@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.exercise import Exercise
 from backend.models.exercise_progress import UserExerciseProgress
-from backend.pagination import normalize_page
+from backend.pagination import literal_search_pattern, normalize_page
 
 
 class ExerciseRepository:
@@ -16,7 +16,9 @@ class ExerciseRepository:
 
     async def get_paged(self, q=None, limit=20, offset=0):
         q, limit, offset = normalize_page(q, limit, offset)
-        filters = [Exercise.question.ilike(f"%{q}%")] if q else []
+        filters = [
+            Exercise.question.ilike(literal_search_pattern(q),escape="\\")
+        ] if q else []
         total = int(await self.session.scalar(
             select(func.count()).select_from(Exercise).where(*filters)) or 0)
         items = list(await self.session.scalars(

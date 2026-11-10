@@ -15,6 +15,12 @@ def test_pagination_normalizes_query_and_rejects_invalid_bounds():
         normalize_page(None, 101, -1)
 
 
+def test_search_pattern_escapes_sql_wildcards():
+    from backend.pagination import literal_search_pattern
+
+    assert literal_search_pattern("100%_done\\") == r"%100\%\_done\\%"
+
+
 def test_paged_routes_are_added_without_removing_legacy_lists():
     """Catches route conflicts or a compatibility-breaking list replacement."""
     from main import duolingo

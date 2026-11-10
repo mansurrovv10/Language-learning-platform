@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.auth import get_current_user, require_admin
-from backend.api.chat_ws import manager
+from backend.api.chat_ws import manager  # noqa: F401 - stable test/extension surface
 from backend.database.db import SessionLocal
 from backend.models.user import UserProfile
 from backend.schemas.auth_schema import UserResponseSchema
@@ -17,6 +17,7 @@ from backend.schemas.user_schema import (
     UserUpdateSchema,
 )
 from backend.services.account_service import AccountService
+from backend.services.chat_event_broker import chat_event_broker
 from backend.services.user_ser import UserService
 
 user_router=APIRouter(prefix="/users",tags=["Users"])
@@ -79,7 +80,7 @@ async def update_profile(data:UserUpdateSchema,current_user:UserProfile=Depends(
 @user_router.delete("/me")
 async def delete_profile(current_user:UserProfile=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
     await AccountService(db).deactivate(current_user.id)
-    await manager.disconnect_user(current_user.id)
+    await chat_event_broker.revoke_user(current_user.id)
     return {"message":"User deactivated successfully"}
 
 
@@ -109,7 +110,7 @@ async def set_active(user_id:uuid.UUID,data:ActiveUpdateSchema,
         raise HTTPException(status_code=404,detail="User not found")
 
     if not data.is_active:
-        await manager.disconnect_user(user_id)
+        await chat_event_broker.revoke_user(user_id)
 
     return user
 

@@ -13,9 +13,13 @@ pytestmark = [pytest.mark.integration,pytest.mark.asyncio(loop_scope="function")
 class RecordingManager:
     def __init__(self):
         self.deliveries=[]
+        self.disconnections=[]
 
     async def send_to_users(self,user_ids,payload):
         self.deliveries.append((list(user_ids),payload))
+
+    async def disconnect_user(self,user_id,code=4403):
+        self.disconnections.append((user_id,code))
 
 
 class RecordingRedis:
@@ -74,6 +78,36 @@ async def test_published_envelope_has_instance_event_and_targets():
     assert uuid.UUID(envelope["event_id"])
     assert envelope["target_user_ids"] == [str(target)]
     assert envelope["payload"] == {"type":"chat.updated"}
+
+
+async def test_revocation_disconnects_local_and_remote_instances():
+    from backend.services.chat_event_broker import ChatEventBroker
+
+    redis=RecordingRedis()
+    first_manager=RecordingManager()
+    second_manager=RecordingManager()
+    first=ChatEventBroker(redis,first_manager,instance_id="one")
+    second=ChatEventBroker(redis,second_manager,instance_id="two")
+    user_id=uuid.uuid4()
+
+    await first.revoke_user(user_id)
+    await second.process_message(redis.messages[0][1])
+
+    assert first_manager.disconnections == [(user_id,4403)]
+    assert second_manager.disconnections == [(user_id,4403)]
+    assert first_manager.deliveries == []
+    assert second_manager.deliveries == []
+
+
+async def test_disabled_redis_does_not_log_publish_failure(caplog):
+    from backend.services.chat_event_broker import ChatEventBroker
+
+    manager=RecordingManager()
+    await ChatEventBroker(None,manager).deliver_and_publish(
+        [uuid.uuid4()],{"type":"message.created"}
+    )
+
+    assert "Redis chat event publish failed" not in caplog.text
 
 
 async def test_real_redis_fans_out_between_instances_once():

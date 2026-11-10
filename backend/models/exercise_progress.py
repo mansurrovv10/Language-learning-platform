@@ -14,6 +14,8 @@ class UserExerciseProgress(Base):
 
     id: Mapped[int] = mapped_column(Integer,primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),ForeignKey("user.id"))
-    exercise_id: Mapped[int] = mapped_column(Integer,ForeignKey("exercise.id"))
+    exercise_id: Mapped[int] = mapped_column(
+        Integer,ForeignKey("exercise.id",ondelete="CASCADE")
+    )
     completed: Mapped[bool] = mapped_column(Boolean,default=False)
     score: Mapped[int] = mapped_column(Integer,default=0)

@@ -33,6 +33,19 @@ class ChatEventBroker:
     async def deliver_and_publish(self,target_user_ids,payload):
         targets=list(dict.fromkeys(target_user_ids))
         await self.manager.send_to_users(targets,payload)
+        if not self.enabled:
+            return
+        await self._publish(targets,payload)
+
+    async def revoke_user(self,user_id,code=4403):
+        await self.manager.disconnect_user(user_id,code=code)
+        if not self.enabled:
+            return
+        await self._publish(
+            [user_id],{"type":"user.revoked","code":code}
+        )
+
+    async def _publish(self,targets,payload):
         envelope={"event_id":str(uuid.uuid4()),"instance_id":self.instance_id,
                   "target_user_ids":[str(item) for item in targets],"payload":payload}
         try:
@@ -54,6 +67,11 @@ class ChatEventBroker:
                 return
         except (KeyError,TypeError,ValueError,json.JSONDecodeError):
             logger.warning("Ignoring malformed Redis chat event")
+            return
+        if payload.get("type") == "user.revoked":
+            code=payload.get("code",4403)
+            for user_id in targets:
+                await self.manager.disconnect_user(user_id,code=code)
             return
         await self.manager.send_to_users(targets,payload)
 

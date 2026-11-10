@@ -176,3 +176,53 @@ async def test_practice_rejects_changed_replay_expiry_and_wrong_owner(db_session
             expired_payload,
             at=datetime(2026, 1, 1, 12, 16, tzinfo=timezone.utc),
         )
+
+
+async def test_exercise_deletion_preserves_practice_snapshot(db_session):
+    """Keeps immutable practice history while removing live exercise references."""
+    from backend.models.exercise_submission import ExerciseSubmission
+    from backend.models.practice import PracticeSessionItem
+    from backend.models.review_item import ReviewItem
+    from backend.repositories.exercise_repo import ExerciseRepository
+    from backend.repositories.gamification_repo import GamificationRepository
+    from backend.repositories.practice_repo import PracticeRepository
+    from backend.services.practice_service import PracticeService
+
+    user, exercises = await _seed_practice(db_session, exercise_count=1)
+    practice = PracticeService(
+        PracticeRepository(db_session), GamificationRepository(db_session)
+    )
+    session = await practice.create_session(
+        user.id, at=datetime(2026, 1, 1, 12, 1, tzinfo=timezone.utc)
+    )
+    db_session.add(
+        ExerciseSubmission(
+            user_id=user.id,
+            exercise_id=exercises[0].id,
+            idempotency_key="delete-snapshot",
+            request_hash="a" * 64,
+            response={"correct": False},
+        )
+    )
+    await db_session.commit()
+
+    await ExerciseRepository(db_session).delete(exercises[0])
+
+    item = await db_session.scalar(
+        select(PracticeSessionItem).where(
+            PracticeSessionItem.session_id == session.id
+        )
+    )
+    assert item is not None
+    assert item.exercise_id is None
+    assert item.question == "Snapshot 0"
+    assert await db_session.scalar(
+        select(func.count()).select_from(ReviewItem).where(
+            ReviewItem.exercise_id == exercises[0].id
+        )
+    ) == 0
+    assert await db_session.scalar(
+        select(func.count()).select_from(ExerciseSubmission).where(
+            ExerciseSubmission.exercise_id == exercises[0].id
+        )
+    ) == 0

@@ -36,7 +36,7 @@ class ReviewItem(Base):
         UUID(as_uuid=True), ForeignKey("user.id"), nullable=False
     )
     exercise_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("exercise.id"), nullable=False
+        Integer, ForeignKey("exercise.id",ondelete="CASCADE"), nullable=False
     )
     box: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     due_at: Mapped[datetime] = mapped_column(

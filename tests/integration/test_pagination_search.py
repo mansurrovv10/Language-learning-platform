@@ -34,7 +34,9 @@ async def test_content_and_user_search_is_case_insensitive_paged_and_stable(db_s
     )
     active = Language(code=f"a-{uuid.uuid4().hex[:6]}",name="Alpha",is_active=True)
     inactive = Language(code=f"h-{uuid.uuid4().hex[:6]}",name="Alpha Hidden",is_active=False)
-    db_session.add_all([active,inactive])
+    literal = Language(code=f"p-{uuid.uuid4().hex[:6]}",name="Progress 100%",is_active=True)
+    wildcard = Language(code=f"w-{uuid.uuid4().hex[:6]}",name="Progress 100x",is_active=True)
+    db_session.add_all([active,inactive,literal,wildcard])
     await db_session.flush()
     courses = [
         Course(language_id=active.id,title="Alpha Basics",description="First",level=LevelChoices.A1,order=2),
@@ -62,6 +64,10 @@ async def test_content_and_user_search_is_case_insensitive_paged_and_stable(db_s
     assert exercise_total == 1 and exercise_page[0].question == "Find Alpha"
     user_page,user_total = await UserRepository(db_session).get_paged(first.email.upper(),10,0)
     assert user_total == 1 and user_page[0].id == first.id
+    literal_page,literal_total = await LanguageRepository(db_session).get_paged(
+        "100%",10,0,False
+    )
+    assert literal_total == 1 and literal_page[0].id == literal.id
 
 
 async def test_message_pagination_requires_membership_and_searches_content(db_session):

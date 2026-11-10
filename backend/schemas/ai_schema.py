@@ -1,9 +1,14 @@
 import json
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator
 
-BoundedText = Annotated[str, Field(min_length=1,max_length=2000)]
+BoundedText = Annotated[
+    str, StringConstraints(strip_whitespace=True,min_length=1,max_length=2000)
+]
+BoundedHistoryText = Annotated[
+    str, StringConstraints(strip_whitespace=True,min_length=1,max_length=1000)
+]
 
 
 class ExerciseAnswerRequest(BaseModel):
@@ -13,6 +18,12 @@ class ExerciseAnswerRequest(BaseModel):
     @field_validator("answer")
     @classmethod
     def bound_answer(cls,value):
+        if value is None:
+            raise ValueError("answer is required")
+        if isinstance(value,str):
+            value = value.strip()
+            if not value:
+                raise ValueError("answer is required")
         if len(json.dumps(value,ensure_ascii=False,allow_nan=False)) > 2000:
             raise ValueError("answer is too long")
         return value
@@ -28,7 +39,7 @@ class ExamplesRequest(ExerciseRequest):
 
 class ChatTurn(BaseModel):
     role: str = Field(pattern="^(user|assistant)$")
-    content: str = Field(min_length=1,max_length=1000)
+    content: BoundedHistoryText
 
 
 class AIChatRequest(BaseModel):
@@ -36,8 +47,21 @@ class AIChatRequest(BaseModel):
     history: list[ChatTurn] = Field(default_factory=list,max_length=10)
 
 
-class TextResponse(BaseModel):
-    text: str
+class EvaluationRequest(BaseModel):
+    exercise_id: int
+    answer: BoundedText
+
+
+class ExplanationResponse(BaseModel):
+    explanation: str
+
+
+class HintResponse(BaseModel):
+    hint: str
+
+
+class ReplyResponse(BaseModel):
+    reply: str
 
 
 class ExamplesResponse(BaseModel):

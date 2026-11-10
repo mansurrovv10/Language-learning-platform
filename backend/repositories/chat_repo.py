@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.chat import Chat, ChatMember
 from backend.models.message import Message
 from backend.models.user import UserProfile
-from backend.pagination import normalize_page
+from backend.pagination import literal_search_pattern, normalize_page
 
 
 class ChatRepository:
@@ -97,7 +97,9 @@ class ChatRepository:
         q,limit,offset=normalize_page(q,limit,offset)
         filters=[Message.chat_id == chat_id]
         if q:
-            filters.append(Message.content.ilike(f"%{q}%"))
+            filters.append(Message.content.ilike(
+                literal_search_pattern(q),escape="\\"
+            ))
         total=int(await self.session.scalar(
             select(func.count()).select_from(Message).where(*filters)) or 0)
         items=list(await self.session.scalars(

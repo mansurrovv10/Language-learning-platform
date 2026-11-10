@@ -25,7 +25,10 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.UUID(), sa.ForeignKey("user.id"), nullable=False),
         sa.Column(
-            "exercise_id", sa.Integer(), sa.ForeignKey("exercise.id"), nullable=False
+            "exercise_id",
+            sa.Integer(),
+            sa.ForeignKey("exercise.id", ondelete="CASCADE"),
+            nullable=False,
         ),
         sa.Column("box", sa.Integer(), nullable=False),
         sa.Column("due_at", timestamp, nullable=False),
@@ -93,7 +96,10 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column(
-            "exercise_id", sa.Integer(), sa.ForeignKey("exercise.id"), nullable=False
+            "exercise_id",
+            sa.Integer(),
+            sa.ForeignKey("exercise.id", ondelete="SET NULL"),
+            nullable=True,
         ),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("exercise_type", sa.String(32), nullable=False),

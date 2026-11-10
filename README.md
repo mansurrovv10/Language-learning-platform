@@ -47,14 +47,14 @@ Supported discovery routes include `GET /languages/paged`, `GET /courses/paged`,
 
 OpenAI is optional. Without `OPENAI_API_KEY`, AI endpoints return controlled `503 AI_UNAVAILABLE`; all deterministic learning features continue to work.
 
-- `POST /ai/explain` — concise explanation for an exercise answer.
-- `POST /ai/hint` — a hint instructed not to reveal the answer.
+- `POST /ai/explain` — concise explanation for an accessible exercise, returned as `{explanation}`.
+- `POST /ai/hint` — a hint returned as `{hint}`; the correct answer is not sent to the provider.
 - `POST /ai/examples` — one to five examples.
-- `POST /ai/chat` — bounded conversation using the learner's selected language and level.
+- `POST /ai/chat` — bounded conversation using the learner's selected language and level, returned as `{reply}`.
 - `POST /ai/review` — tasks based only on server-selected due material.
 - `POST /ai/evaluate` — advisory structured evaluation of a free-text answer; it never changes game state.
 
-Requests are authenticated, length-limited, moderated on input and output, limited by a per-user daily quota, sent with `store=false`, and recorded in a minimal usage audit. Expected failures are `AI_UNAVAILABLE` (503), `AI_QUOTA_EXCEEDED` (429), `AI_UNSAFE_INPUT` (400), and `AI_PROVIDER_ERROR`/`AI_UNSAFE_OUTPUT` (502). AI evaluation is not guaranteed to be perfectly accurate.
+Requests are authenticated, trimmed, length-limited, moderated on input and output, limited by a per-user daily quota, sent with `store=false`, and recorded in a minimal usage audit. Exercise-based AI routes enforce the same unlocked learning-path access as deterministic exercise routes. Expected failures are `AI_UNAVAILABLE` (503), `AI_QUOTA_EXCEEDED` (429), `AI_UNSAFE_INPUT` (400), and `AI_PROVIDER_ERROR`/`AI_UNSAFE_OUTPUT` (502). AI evaluation is not guaranteed to be perfectly accurate.
 
 ## Exercise idempotency
 

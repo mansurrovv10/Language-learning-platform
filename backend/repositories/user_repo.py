@@ -6,7 +6,7 @@ from backend.models.gamification import Hearts
 from backend.models.progress import UserProgress
 from backend.models.social import FriendRequest, Friendship
 from backend.models.user import UserProfile
-from backend.pagination import normalize_page
+from backend.pagination import literal_search_pattern, normalize_page
 
 
 class UserRepository:
@@ -40,8 +40,11 @@ class UserRepository:
         q,limit,offset=normalize_page(q,limit,offset)
         filters=[]
         if q:
-            pattern=f"%{q}%"
-            filters.append(or_(UserProfile.username.ilike(pattern),UserProfile.email.ilike(pattern)))
+            pattern=literal_search_pattern(q)
+            filters.append(or_(
+                UserProfile.username.ilike(pattern,escape="\\"),
+                UserProfile.email.ilike(pattern,escape="\\"),
+            ))
         total=int(await self.db.scalar(
             select(func.count()).select_from(UserProfile).where(*filters)) or 0)
         items=list(await self.db.scalars(

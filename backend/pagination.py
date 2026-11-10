@@ -9,3 +9,8 @@ def normalize_page(
     if normalized is not None and len(normalized) > 100:
         raise ValueError("SEARCH_QUERY_TOO_LONG")
     return normalized, limit, offset
+
+
+def literal_search_pattern(query: str) -> str:
+    escaped = query.replace("\\","\\\\").replace("%","\\%").replace("_","\\_")
+    return f"%{escaped}%"

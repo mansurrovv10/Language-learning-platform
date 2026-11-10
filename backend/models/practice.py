@@ -82,8 +82,8 @@ class PracticeSessionItem(Base):
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("practice_session.id"), nullable=False, index=True
     )
-    exercise_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("exercise.id"), nullable=False
+    exercise_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("exercise.id",ondelete="SET NULL"), nullable=True
     )
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     exercise_type: Mapped[str] = mapped_column(String(32), nullable=False)
